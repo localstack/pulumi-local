@@ -1,2 +1,1 @@
-localstack-client
 pyyaml

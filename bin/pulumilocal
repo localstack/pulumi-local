@@ -2,20 +2,22 @@
 
 """
 Thin wrapper around the "pulumi" command line interface (CLI) to use
-Pulumi (https://pulumi.com) with LocalStack.
+Pulumi (https://pulumi.com) with LocalStack (https://localstack.cloud).
 
 Options:
-  Run "aws help" for more details on the aws CLI subcommands.
+  Run "pulumi -h" for more details on the pulumi CLI subcommands.
 """
 
 import os
 import sys
 import yaml
 
+# for local testing
 PARENT_FOLDER = os.path.realpath(os.path.join(os.path.dirname(__file__), '..'))
 if os.path.isdir(os.path.join(PARENT_FOLDER, '.venv')):
     sys.path.insert(0, PARENT_FOLDER)
 
+# define global constants
 TRUE_STRINGS = ['1', 'true', 'True']
 PULUMI_CMD = os.environ.get('PULUMI_CMD') or 'pulumi'
 PULUMI_STACK_NAME = os.environ.get('PULUMI_STACK_NAME') or 'localstack'
@@ -35,7 +37,7 @@ DEFAULT_CONFIG = {
     }
 }
 
-# Unfortunately, we need to hardcode the services here, as importing from
+# Unfortunately, we need to hardcode the service names here, as importing from
 # localstack-client doesn't work (some keys differ / are unavailable in Pulumi)
 SERVICES = [
     'acm',
@@ -108,15 +110,19 @@ def get_service_endpoint():
 
 def prepare_config_file():
     file_name = 'Pulumi.%s.yaml' % PULUMI_STACK_NAME
+    if os.path.exists(file_name):
+        return file_name
+
+    # construct endpoints config
     endpoint = get_service_endpoint()
     endpoints = DEFAULT_CONFIG['config']['aws:endpoints']
     if not endpoints:
         entry = {service: endpoint for service in SERVICES}
         endpoints.append(entry)
 
-    if not os.path.exists(file_name):
-        with open(file_name, 'w') as fp:
-            fp.write(yaml.dump(DEFAULT_CONFIG))
+    # write local config file
+    with open(file_name, 'w') as fp:
+        fp.write(yaml.dump(DEFAULT_CONFIG))
     return file_name
 
 

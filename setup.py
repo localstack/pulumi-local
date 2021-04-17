@@ -15,7 +15,7 @@ if __name__ == '__main__':
         scripts=['bin/pulumilocal', 'bin/pulumilocal.bat'],
         package_data={},
         data_files={},
-        install_requires=['localstack-client'],
+        install_requires=['pyyaml'],
         license="Apache License 2.0",
         classifiers=[
             "Programming Language :: Python :: 2",
