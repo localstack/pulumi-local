@@ -1,0 +1,140 @@
+#!/usr/bin/env python
+
+"""
+Thin wrapper around the "pulumi" command line interface (CLI) to use
+Pulumi (https://pulumi.com) with LocalStack.
+
+Options:
+  Run "aws help" for more details on the aws CLI subcommands.
+"""
+
+import os
+import sys
+import yaml
+
+PARENT_FOLDER = os.path.realpath(os.path.join(os.path.dirname(__file__), '..'))
+if os.path.isdir(os.path.join(PARENT_FOLDER, '.venv')):
+    sys.path.insert(0, PARENT_FOLDER)
+
+TRUE_STRINGS = ['1', 'true', 'True']
+PULUMI_CMD = os.environ.get('PULUMI_CMD') or 'pulumi'
+PULUMI_STACK_NAME = os.environ.get('PULUMI_STACK_NAME') or 'localstack'
+LOCALSTACK_HOSTNAME = os.environ.get('LOCALSTACK_HOSTNAME') or 'localhost'
+EDGE_PORT = int(os.environ.get('EDGE_PORT') or '4566')
+USE_SSL = os.environ.get('USE_SSL') in TRUE_STRINGS
+
+DEFAULT_CONFIG = {
+    'config': {
+        'aws:accessKey': 'test',
+        'aws:secretKey': 'test',
+        'aws:endpoints': [],
+        # 'aws:region': ..., # TODO add?
+        'aws:s3ForcePathStyle': 'true',
+        'aws:skipCredentialsValidation': 'true',
+        'aws:skipRequestingAccountId': 'true',
+    }
+}
+
+# Unfortunately, we need to hardcode the services here, as importing from
+# localstack-client doesn't work (some keys differ / are unavailable in Pulumi)
+SERVICES = [
+    'acm',
+    'amplify',
+    'apigateway',
+    'applicationautoscaling',
+    'appsync',
+    'athena',
+    'autoscaling',
+    'batch',
+    'cloudformation',
+    'cloudfront',
+    'cloudsearch',
+    'cloudtrail',
+    'cloudwatch',
+    'cloudwatchevents',
+    'cloudwatchlogs',
+    'codecommit',
+    'cognitoidentity',
+    'cognitoidp',
+    'docdb',
+    'dynamodb',
+    'ec2',
+    'ecr',
+    'ecs',
+    'eks',
+    'elasticache',
+    'elasticbeanstalk',
+    'elb',
+    'emr',
+    'es',
+    'firehose',
+    'glacier',
+    'glue',
+    'iam',
+    'iot',
+    'kafka',
+    'kinesis',
+    'kinesisanalytics',
+    'kms',
+    'lambda',
+    'mediastore',
+    'neptune',
+    'organizations',
+    'qldb',
+    'rds',
+    'redshift',
+    'route53',
+    's3',
+    'sagemaker',
+    'secretsmanager',
+    'servicediscovery',
+    'ses',
+    'sns',
+    'sqs',
+    'ssm',
+    'stepfunctions',
+    'sts',
+    'swf',
+    'transfer',
+    'xray'
+]
+
+
+def get_service_endpoint():
+    protocol = 'https' if USE_SSL else 'http'
+    endpoint = '%s://%s:%s' % (protocol, LOCALSTACK_HOSTNAME, EDGE_PORT)
+    return endpoint
+
+
+def prepare_config_file():
+    file_name = 'Pulumi.%s.yaml' % PULUMI_STACK_NAME
+    endpoint = get_service_endpoint()
+    endpoints = DEFAULT_CONFIG['config']['aws:endpoints']
+    if not endpoints:
+        entry = {service: endpoint for service in SERVICES}
+        endpoints.append(entry)
+
+    if not os.path.exists(file_name):
+        with open(file_name, 'w') as fp:
+            fp.write(yaml.dump(DEFAULT_CONFIG))
+    return file_name
+
+
+def prepare_cmd_args():
+    cmd_args = list(sys.argv)
+    if 'up' in cmd_args and '-s' not in cmd_args:
+        cmd_args += ['-s', PULUMI_STACK_NAME]
+    return cmd_args
+
+
+def main():
+    """
+    Constructs command line string and hands over execution to the "pulumi" CLI
+    """
+    prepare_config_file()
+    cmd_args = prepare_cmd_args()
+    return os.execvp(PULUMI_CMD, cmd_args)
+
+
+if __name__ == '__main__':
+    main()
