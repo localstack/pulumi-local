@@ -30,7 +30,7 @@ DEFAULT_CONFIG = {
         'aws:accessKey': 'test',
         'aws:secretKey': 'test',
         'aws:endpoints': [],
-        # 'aws:region': ..., # TODO add?
+        'aws:region': 'us-east-1',
         'aws:s3ForcePathStyle': 'true',
         'aws:skipCredentialsValidation': 'true',
         'aws:skipRequestingAccountId': 'true',
@@ -127,6 +127,9 @@ def prepare_config_file():
 
 
 def prepare_cmd_args():
+    """
+    Constructs command line arguments and hands over execution to the "pulumi" CLI
+    """
     cmd_args = list(sys.argv)
     if 'up' in cmd_args and '-s' not in cmd_args:
         cmd_args += ['-s', PULUMI_STACK_NAME]
@@ -134,11 +137,14 @@ def prepare_cmd_args():
 
 
 def main():
-    """
-    Constructs command line string and hands over execution to the "pulumi" CLI
-    """
     prepare_config_file()
-    cmd_args = prepare_cmd_args()
+
+    if sys.argv[1] == 'init':
+        # TODO: proper CLI using click/argparse
+        cmd_args = [sys.argv[0], 'stack', 'init', PULUMI_STACK_NAME]
+    else:
+        cmd_args = prepare_cmd_args()
+
     return os.execvp(PULUMI_CMD, cmd_args)
 
 
