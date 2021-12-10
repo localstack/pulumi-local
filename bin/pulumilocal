@@ -43,6 +43,7 @@ SERVICES = [
     'acm',
     'amplify',
     'apigateway',
+    'apigatewayv2',
     'applicationautoscaling',
     'appsync',
     'athena',
