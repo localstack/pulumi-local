@@ -42,6 +42,7 @@ DEFAULT_CONFIG = {
 SERVICES = [
     'accessanalyzer',
     'account',
+    'acm',
     'acmpca',
     'alexaforbusiness',
     'amp',
