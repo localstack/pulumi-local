@@ -6,10 +6,10 @@ if __name__ == '__main__':
 
     setup(
         name='pulumi-local',
-        version='0.3',
+        version='0.4',
         description='Thin wrapper script to use Pulumi with LocalStack',
-        author='Waldemar Hummer',
-        author_email='waldemar.hummer@gmail.com',
+        author='LocalStack Team',
+        author_email='info@localstack.cloud',
         url='https://github.com/localstack/pulumi-local',
         packages=[],
         scripts=['bin/pulumilocal', 'bin/pulumilocal.bat'],

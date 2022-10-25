@@ -40,6 +40,7 @@ You can configure the following environment variables:
 
 ## Change Log
 
+* v0.4: Point pulumilocal.bat to the correct script
 * v0.3: Add apigatewayv2 service endpoint
 * v0.2: Add init command and add aws:region key by default
 * v0.1: Initial release
