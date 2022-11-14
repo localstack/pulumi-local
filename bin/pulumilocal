@@ -239,7 +239,6 @@ SERVICES = [
     'migrationhub',
     'migrationhubconfig',
     'mobile',
-    'mobileanalytics',
     'mq',
     'mturk',
     'mwaa',
