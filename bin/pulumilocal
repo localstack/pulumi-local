@@ -369,7 +369,7 @@ def prepare_config_file():
 
 def prepare_cmd_args():
     """
-    Constructs command line arguments and hands over execution to the "pulumi" CLI
+    Constructs command line arguments for running the "pulumi" CLI
     """
     cmd_args = list(sys.argv)
     if 'up' in cmd_args and '-s' not in cmd_args:
