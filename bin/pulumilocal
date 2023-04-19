@@ -31,7 +31,7 @@ DEFAULT_CONFIG = {
         'aws:secretKey': 'test',
         'aws:endpoints': [],
         'aws:region': 'us-east-1',
-        'aws:s3ForcePathStyle': 'true',
+        'aws:s3UsePathStyle': 'true',
         'aws:skipCredentialsValidation': 'true',
         'aws:skipRequestingAccountId': 'true',
     }

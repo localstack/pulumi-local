@@ -6,7 +6,7 @@ if __name__ == '__main__':
 
     setup(
         name='pulumi-local',
-        version='0.5',
+        version='0.6',
         description='Thin wrapper script to use Pulumi with LocalStack',
         author='LocalStack Team',
         author_email='info@localstack.cloud',
