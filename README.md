@@ -40,6 +40,7 @@ You can configure the following environment variables:
 
 ## Change Log
 
+* v0.6: Replace deprecated `s3ForcePathStyle` with `s3UsePathStyle` in default config
 * v0.5: Remove deprecated `mobileanalytics` service config to fix invalid key error
 * v0.4: Point pulumilocal.bat to the correct script
 * v0.3: Add apigatewayv2 service endpoint
