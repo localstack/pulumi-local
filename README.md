@@ -5,7 +5,8 @@ command line interface to use [`Pulumi`](https://github.com/pulumi/pulumi) with 
 
 ## Version Notices
 ### v1.0
-1. Removed PULUMI_STACK_NAME and no longer default to a Pulumi Stack name of `localstack`. The `pulumi` cmd and env determines the Stack name.
+1. Removed PULUMI_STACK_NAME environment variable.
+2. No longer default to a Pulumi Stack name of `localstack`. The `pulumi` cmd and env determines the Stack name.
 
 
 ## Installation
@@ -47,7 +48,9 @@ pulumilocal up --cwd myproj
 
 ## How it works
 
-When running a deployment command like `pulumilocal up`, the wrapper script creates a `Pulumi.localstack.yaml` config file with local endpoint definitions, and then deploys a Pulumi stack called `localstack` to your LocalStack instance on `localhost`.
+When running any pulumi deployment command like `pulumilocal ["up", "destroy", "preview", "cancel"]`,
+the wrapper script runs the `pulumi config` command to augment the pulumi config with LocalStack AWS configuration,
+and then runs the original pulumi command. 
 
 ## Configurations
 
