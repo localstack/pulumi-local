@@ -3,12 +3,6 @@
 This package provides the `pulumilocal` command, which is a thin wrapper around the `pulumi`
 command line interface to use [`Pulumi`](https://github.com/pulumi/pulumi) with [LocalStack](https://github.com/localstack/localstack).
 
-## Version Notices
-### v1.0
-1. Removed PULUMI_STACK_NAME environment variable.
-2. No longer default to a Pulumi Stack name of `localstack`. The `pulumi` cmd and env determines the Stack name.
-
-
 ## Installation
 
 You can install the `pulumilocal` command via `pip`:
@@ -63,6 +57,18 @@ You can configure the following environment variables:
 ## Deploying to AWS
 Use your preferred Pulumi backend. https://www.pulumi.com/docs/concepts/state/#deciding-on-a-state-backend
 Change the `pulumilocal` command in the instructions above to `pulumi`.
+
+## Change Log
+
+* v1.0: Using `pulumi config set-all` to set all the AWS provider configurating instead of modifying
+* the Stack file directly. Removed defaulting the stack name to `localstack`. Added argparse. 
+* Removed pyyaml dependency. Removed python2 package classifiers. 
+* v0.6: Replace deprecated `s3ForcePathStyle` with `s3UsePathStyle` in default config
+* v0.5: Remove deprecated `mobileanalytics` service config to fix invalid key error
+* v0.4: Point pulumilocal.bat to the correct script
+* v0.3: Add apigatewayv2 service endpoint
+* v0.2: Add init command and add aws:region key by default
+* v0.1: Initial release
 
 ## License
 
