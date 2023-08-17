@@ -1,13 +1,19 @@
 #!/usr/bin/env python
 
 from setuptools import setup
+# read the contents of your README file
+from pathlib import Path
+this_directory = Path(__file__).parent
+long_description = (this_directory / "README.md").read_text()
 
 if __name__ == '__main__':
 
     setup(
         name='pulumi-local',
-        version='1.0',
+        version='1.1',
         description='Thin wrapper script to use Pulumi with LocalStack',
+        long_description=long_description,
+        long_description_content_type='text/markdown',
         author='LocalStack Team',
         author_email='info@localstack.cloud',
         url='https://github.com/localstack/pulumi-local',
