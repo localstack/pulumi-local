@@ -27,7 +27,7 @@ install: venv          ## Install dependencies in local virtualenv folder
 
 publish: venv          ## Publish the library to the central PyPi repository
 	# build and upload archive
-	($(VENV_RUN) && ./setup.py sdist && twine upload dist/*)
+	($(VENV_RUN) && ./setup.py sdist && twine upload --repository pulumi-local dist/*)
 
 lint:              ## Run code linter
 	flake8 bin/pulumilocal
