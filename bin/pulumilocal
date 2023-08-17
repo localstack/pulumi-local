@@ -348,9 +348,11 @@ def set_localstack_pulumi_config(args: argparse.Namespace):
     config_args = list()
     config_args.append(PULUMI_CMD)
     config_args.append("config")
+    # If stack arg was supplied, add it to config command
     if args.stack is not None:
         config_args.append("--stack")
         config_args.append(args.stack)
+    # If cwd arg was supplied, add it to config command
     if args.cwd is not None:
         config_args.append("--cwd")
         config_args.append(args.cwd)
@@ -367,14 +369,13 @@ def set_localstack_pulumi_config(args: argparse.Namespace):
     config_args.append("aws:skipCredentialsValidation=true")
     config_args.append("--plaintext")
     config_args.append("aws:skipRequestingAccountId=true")
+    # Add the AWS Endpoints list
     for idx, service in enumerate(SERVICES):
         config_args.append("--path")
         config_args.append("--plaintext")
         config_args.append(f"aws:endpoints[{idx}].{service}={service_url}")
-    # print(f"executing: {PULUMI_CMD} {config_args}")
     process = subprocess.Popen(executable=PULUMI_CMD, args=config_args, env=os.environ, stdout=subprocess.PIPE)
     process.wait()
-    # print(f"process.returncode: {process.returncode}")
 
 
 def main():
@@ -389,7 +390,6 @@ def main():
                         required=False,
                         type=str)
     args, extra = parser.parse_known_args()
-    print(f"command {args.command}")
 
     # If this is a pulumi deployment command, update the stack with LocalStack AWS config
     if args.command in ["up", "destroy", "preview", "cancel"]:
