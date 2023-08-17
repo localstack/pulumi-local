@@ -13,7 +13,7 @@ endif
 VENV_RUN = . $(VENV_ACTIVATE)
 $(VENV_ACTIVATE):
 	test -d $(VENV_DIR) || $(VENV_BIN) $(VENV_DIR)
-	$(VENV_RUN); $(PIP_CMD) install --upgrade pip setuptools twine
+	$(VENV_RUN); $(PIP_CMD) install --upgrade pip setuptools wheel twine
 	$(VENV_RUN); $(PIP_CMD) install $(PIP_OPTS) -r $(VENV_REQS_FILE)
 	touch $(VENV_ACTIVATE)
 
