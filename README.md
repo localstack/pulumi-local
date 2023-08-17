@@ -61,8 +61,8 @@ Change the `pulumilocal` command in the instructions above to `pulumi`.
 ## Change Log
 
 * v1.0: Using `pulumi config set-all` to set all the AWS provider configurating instead of modifying
-* the Stack file directly. Removed defaulting the stack name to `localstack`. Added argparse. 
-* Removed pyyaml dependency. Removed python2 package classifiers. 
+  the Stack file directly. Removed defaulting the stack name to `localstack`. Added argparse. 
+  Removed pyyaml dependency. Removed python2 package classifiers. 
 * v0.6: Replace deprecated `s3ForcePathStyle` with `s3UsePathStyle` in default config
 * v0.5: Remove deprecated `mobileanalytics` service config to fix invalid key error
 * v0.4: Point pulumilocal.bat to the correct script
