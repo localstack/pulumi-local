@@ -3,17 +3,30 @@ import subprocess
 import tempfile
 import uuid
 from typing import Dict
+import boto3
 
 THIS_PATH = os.path.abspath(os.path.dirname(__file__))
 ROOT_PATH = os.path.join(THIS_PATH, "..")
 PULUMILOCAL_BIN = os.path.join(ROOT_PATH, "bin", "pulumilocal")
+LOCALSTACK_ENDPOINT = "http://localhost:4566"
+
+
+def test_successful_provisioning():
+    # create bucket
+    bucket_name = short_uid()
+    create_test_bucket(bucket_name)
+    s3_bucket_names = get_bucket_names()
+
+    # Pulumi adds suffix to the bucket's name so not enough simply checking for the name in the list
+    assert any(s3_bucket.startswith(bucket_name) for s3_bucket in s3_bucket_names)
 
 
 def test_service_endpoints():
     # create bucket
     bucket_name = short_uid()
+    error_message = "Invalid or unknown key. Check `pulumi config get aws:endpoints`."
 
-    assert "Invalid or unknown key. Check `pulumi config get aws:endpoints`." not in create_test_bucket(bucket_name), \
+    assert error_message not in create_test_bucket(bucket_name), \
         "Endpoints list is not up-to-date."
 
 ###
@@ -52,8 +65,29 @@ export const bucketName = bucket.id;
     )
 
 
+def get_bucket_names(**kwargs: dict) -> list:
+    s3 = client("s3", region_name="eu-west-1", **kwargs)
+    s3_buckets = s3.list_buckets().get("Buckets")
+    return [s["Name"] for s in s3_buckets]
+
+
 def short_uid() -> str:
     return str(uuid.uuid4())[0:8]
+
+
+def client(service: str, **kwargs):
+    # if aws access key is not set AND no profile is in the environment,
+    # we want to set the access key and the secret key to test
+    if "aws_access_key_id" not in kwargs and "AWS_PROFILE" not in os.environ:
+        kwargs["aws_access_key_id"] = "test"
+    if "aws_access_key_id" in kwargs and "aws_secret_access_key" not in kwargs:
+        kwargs["aws_secret_access_key"] = "test"
+    boto3.setup_default_session()
+    return boto3.client(
+        service,
+        endpoint_url=LOCALSTACK_ENDPOINT,
+        **kwargs,
+    )
 
 
 def run(cmd, **kwargs) -> str:
