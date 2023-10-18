@@ -10,7 +10,7 @@ if __name__ == '__main__':
 
     setup(
         name='pulumi-local',
-        version='1.2',
+        version='1.1',
         description='Thin wrapper script to use Pulumi with LocalStack',
         long_description=long_description,
         long_description_content_type='text/markdown',

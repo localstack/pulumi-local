@@ -37,19 +37,25 @@ def generate_service_endpoints(args) -> Dict:
     '''
     cmd_args = [PULUMI_CMD, "about", "--json"]
     if args.cwd:
-       cmd_args.extend(("--cwd",args.cwd))
-    sp = subprocess.check_output(executable=PULUMI_CMD, args=cmd_args, env=os.environ, stderr=subprocess.PIPE)
-    plugins = json.loads(sp.decode("utf-8")).get("plugins")
+        cmd_args.extend(("--cwd", args.cwd))
     try:
-        version = "@" + list(filter(lambda plugin: plugin["name"] == "aws",plugins)).pop().get("version")
-    except (IndexError, TypeError):
+        sp = subprocess.run(executable=PULUMI_CMD, args=cmd_args, env=os.environ, stdout=subprocess.PIPE, check=True)
+    except subprocess.CalledProcessError as e:
+        exit(e.returncode)
+    plugins = json.loads(sp.stdout.decode("utf-8")).get("plugins")
+    try:
+        version = "@" + next(filter(lambda plugin: plugin["name"] == "aws", plugins)).get("version")
+    except (TypeError, StopIteration):
         version = ""
     config_args = [PULUMI_CMD, "package", "get-schema", f"aws{version}"]
-    output = subprocess.check_output(executable=PULUMI_CMD, args=config_args, env=os.environ, stderr=subprocess.PIPE)
-    schema = json.loads(output.decode("utf-8"))
+    try:
+        sp = subprocess.run(executable=PULUMI_CMD, args=config_args, env=os.environ, stdout=subprocess.PIPE, check=True)
+    except subprocess.CalledProcessError as e:
+        exit(e.returncode)
+    schema = json.loads(sp.stdout.decode("utf-8"))
     services = list(schema['types']['aws:config/endpoints:endpoints']['properties'].keys())
     return services
-    
+
 
 def get_service_endpoint() -> str:
     protocol = 'https' if USE_SSL else 'http'
@@ -57,7 +63,7 @@ def get_service_endpoint() -> str:
     return endpoint
 
 
-def set_config_options(is_path: bool=False,is_secret: bool=False, **kwargs: Dict) -> List:
+def set_config_options(is_path: bool = False, is_secret: bool = False, **kwargs: Dict) -> List:
     args = []
     for option, value in kwargs.items():
         if is_path:
@@ -68,7 +74,7 @@ def set_config_options(is_path: bool=False,is_secret: bool=False, **kwargs: Dict
             args.append("--plaintext")
         args.append(f"{option}={value}")
     return args
-    
+
 
 def set_localstack_pulumi_config(args: argparse.Namespace):
     # LocalStack Endpoint
@@ -88,7 +94,13 @@ def set_localstack_pulumi_config(args: argparse.Namespace):
     config_args.append("set-all")
 
     # Resetting all endpoints
-    subprocess.Popen(executable=PULUMI_CMD, args=(config_args + set_config_options(is_path=True,**{"aws:endpoints":""})), env=os.environ, stdout=subprocess.PIPE)
+    try:
+        subprocess.run(executable=PULUMI_CMD, args=(config_args + set_config_options(is_path=True, **{"aws:endpoints": ""})), env=os.environ, stdout=subprocess.PIPE, check=True)
+    except subprocess.CalledProcessError as e:
+        exit(e.returncode)
+    except FileNotFoundError as e:
+        print(e)
+        exit(e.errno)
 
     DEFAULT_CONFIG_ARGS = {
         "aws:region": "us_east-1",
@@ -96,13 +108,15 @@ def set_localstack_pulumi_config(args: argparse.Namespace):
         "aws:secretKey": "test",
         "aws:s3UsePathStyle": "true",
         "aws:skipCredentialsValidation": "true",
-        "aws:skipRequestingAccountId":"true",
+        "aws:skipRequestingAccountId": "true",
     }
     config_args.extend(set_config_options(**DEFAULT_CONFIG_ARGS))
     for idx, service in enumerate(generate_service_endpoints(args)):
-        config_args.extend(set_config_options(is_path=True,**{f"aws:endpoints[{idx}].{service}":service_url}))
-    process = subprocess.Popen(executable=PULUMI_CMD, args=config_args, env=os.environ, stdout=subprocess.PIPE)
-    process.wait()
+        config_args.extend(set_config_options(is_path=True, **{f"aws:endpoints[{idx}].{service}": service_url}))
+    try:
+        subprocess.run(executable=PULUMI_CMD, args=config_args, env=os.environ, stdout=subprocess.PIPE, check=True)
+    except subprocess.CalledProcessError as e:
+        exit(e.returncode)
 
 
 def main():

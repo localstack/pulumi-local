@@ -62,7 +62,6 @@ Change the `pulumilocal` command in the instructions above to `pulumi`.
 
 ## Change Log
 
-* v1.2: Updated service endpoint list
 * v1.1: Added README to long description and update twine publish.
 * v1.0: Using `pulumi config set-all` to set all the AWS provider configurating instead of modifying
   the Stack file directly. Removed defaulting the stack name to `localstack`. Added argparse. 
