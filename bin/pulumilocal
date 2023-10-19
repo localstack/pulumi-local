@@ -12,6 +12,8 @@ import os
 import sys
 import argparse
 import subprocess
+import json
+from typing import Dict, List
 
 # for local testing
 PARENT_FOLDER = os.path.realpath(os.path.join(os.path.dirname(__file__), '..'))
@@ -29,316 +31,49 @@ USE_SSL = os.environ.get('USE_SSL') in TRUE_STRINGS
 if PULUMI_CMD == "pulumilocal":
     PULUMI_CMD = "pulumi"
 
-# Unfortunately, we need to hardcode the service names here, as importing from
-# localstack-client doesn't work (some keys differ / are unavailable in Pulumi)
-SERVICES = [
-    'accessanalyzer',
-    'account',
-    'acm',
-    'acmpca',
-    'alexaforbusiness',
-    'amp',
-    'amplify',
-    'amplifybackend',
-    'apigateway',
-    'apigatewayv2',
-    'appautoscaling',
-    'appconfig',
-    'appflow',
-    'appintegrations',
-    'appintegrationsservice',
-    'applicationautoscaling',
-    'applicationcostprofiler',
-    'applicationdiscovery',
-    'applicationdiscoveryservice',
-    'applicationinsights',
-    'appmesh',
-    'appregistry',
-    'apprunner',
-    'appstream',
-    'appsync',
-    'athena',
-    'auditmanager',
-    'augmentedairuntime',
-    'autoscaling',
-    'autoscalingplans',
-    'backup',
-    'batch',
-    'braket',
-    'budgets',
-    'chime',
-    'cloud9',
-    'cloudcontrol',
-    'cloudcontrolapi',
-    'clouddirectory',
-    'cloudformation',
-    'cloudfront',
-    'cloudhsm',
-    'cloudhsmv2',
-    'cloudsearch',
-    'cloudsearchdomain',
-    'cloudtrail',
-    'cloudwatch',
-    'cloudwatchevents',
-    'cloudwatchlogs',
-    'codeartifact',
-    'codebuild',
-    'codecommit',
-    'codedeploy',
-    'codeguruprofiler',
-    'codegurureviewer',
-    'codepipeline',
-    'codestar',
-    'codestarconnections',
-    'codestarnotifications',
-    'cognitoidentity',
-    'cognitoidentityprovider',
-    'cognitoidp',
-    'cognitosync',
-    'comprehend',
-    'comprehendmedical',
-    'config',
-    'configservice',
-    'connect',
-    'connectcontactlens',
-    'connectparticipant',
-    'costandusagereportservice',
-    'costexplorer',
-    'cur',
-    'databasemigration',
-    'databasemigrationservice',
-    'dataexchange',
-    'datapipeline',
-    'datasync',
-    'dax',
-    'detective',
-    'devicefarm',
-    'devopsguru',
-    'directconnect',
-    'dlm',
-    'dms',
-    'docdb',
-    'ds',
-    'dynamodb',
-    'dynamodbstreams',
-    'ec2',
-    'ec2instanceconnect',
-    'ecr',
-    'ecrpublic',
-    'ecs',
-    'efs',
-    'eks',
-    'elasticache',
-    'elasticbeanstalk',
-    'elasticinference',
-    'elasticsearch',
-    'elasticsearchservice',
-    'elastictranscoder',
-    'elb',
-    'elbv2',
-    'emr',
-    'emrcontainers',
-    'es',
-    'eventbridge',
-    'events',
-    'finspace',
-    'finspacedata',
-    'firehose',
-    'fis',
-    'fms',
-    'forecast',
-    'forecastquery',
-    'forecastqueryservice',
-    'forecastservice',
-    'frauddetector',
-    'fsx',
-    'gamelift',
-    'glacier',
-    'globalaccelerator',
-    'glue',
-    'gluedatabrew',
-    'greengrass',
-    'greengrassv2',
-    'groundstation',
-    'guardduty',
-    'health',
-    'healthlake',
-    'honeycode',
-    'iam',
-    'identitystore',
-    'imagebuilder',
-    'inspector',
-    'iot',
-    'iot1clickdevices',
-    'iot1clickdevicesservice',
-    'iot1clickprojects',
-    'iotanalytics',
-    'iotdataplane',
-    'iotdeviceadvisor',
-    'iotevents',
-    'ioteventsdata',
-    'iotfleethub',
-    'iotjobsdataplane',
-    'iotsecuretunneling',
-    'iotsitewise',
-    'iotthingsgraph',
-    'iotwireless',
-    'kafka',
-    'kafkaconnect',
-    'kendra',
-    'kinesis',
-    'kinesisanalytics',
-    'kinesisanalyticsv2',
-    'kinesisvideo',
-    'kinesisvideoarchivedmedia',
-    'kinesisvideomedia',
-    'kinesisvideosignalingchannels',
-    'kms',
-    'lakeformation',
-    'lambda',
-    'lexmodelbuilding',
-    'lexmodelbuildingservice',
-    'lexmodels',
-    'lexmodelsv2',
-    'lexruntime',
-    'lexruntimeservice',
-    'lexruntimev2',
-    'licensemanager',
-    'lightsail',
-    'location',
-    'lookoutequipment',
-    'lookoutforvision',
-    'lookoutmetrics',
-    'machinelearning',
-    'macie',
-    'macie2',
-    'managedblockchain',
-    'marketplacecatalog',
-    'marketplacecommerceanalytics',
-    'marketplaceentitlement',
-    'marketplaceentitlementservice',
-    'marketplacemetering',
-    'mediaconnect',
-    'mediaconvert',
-    'medialive',
-    'mediapackage',
-    'mediapackagevod',
-    'mediastore',
-    'mediastoredata',
-    'mediatailor',
-    'memorydb',
-    'mgn',
-    'migrationhub',
-    'migrationhubconfig',
-    'mobile',
-    'mq',
-    'mturk',
-    'mwaa',
-    'neptune',
-    'networkfirewall',
-    'networkmanager',
-    'nimblestudio',
-    'opsworks',
-    'opsworkscm',
-    'organizations',
-    'outposts',
-    'personalize',
-    'personalizeevents',
-    'personalizeruntime',
-    'pi',
-    'pinpoint',
-    'pinpointemail',
-    'pinpointsmsvoice',
-    'polly',
-    'pricing',
-    'prometheus',
-    'prometheusservice',
-    'proton',
-    'qldb',
-    'qldbsession',
-    'quicksight',
-    'ram',
-    'rds',
-    'rdsdata',
-    'rdsdataservice',
-    'redshift',
-    'redshiftdata',
-    'rekognition',
-    'resourcegroups',
-    'resourcegroupstagging',
-    'resourcegroupstaggingapi',
-    'robomaker',
-    'route53',
-    'route53domains',
-    'route53recoverycontrolconfig',
-    'route53recoveryreadiness',
-    'route53resolver',
-    's3',
-    's3control',
-    's3outposts',
-    'sagemaker',
-    'sagemakeredgemanager',
-    'sagemakerfeaturestoreruntime',
-    'sagemakerruntime',
-    'savingsplans',
-    'schemas',
-    'sdb',
-    'secretsmanager',
-    'securityhub',
-    'serverlessapplicationrepository',
-    'serverlessapprepo',
-    'serverlessrepo',
-    'servicecatalog',
-    'servicediscovery',
-    'servicequotas',
-    'ses',
-    'sesv2',
-    'sfn',
-    'shield',
-    'signer',
-    'simpledb',
-    'sms',
-    'snowball',
-    'sns',
-    'sqs',
-    'ssm',
-    'ssmcontacts',
-    'ssmincidents',
-    'sso',
-    'ssoadmin',
-    'ssooidc',
-    'stepfunctions',
-    'storagegateway',
-    'sts',
-    'support',
-    'swf',
-    'synthetics',
-    'textract',
-    'timestreamquery',
-    'timestreamwrite',
-    'transcribe',
-    'transcribeservice',
-    'transcribestreaming',
-    'transcribestreamingservice',
-    'transfer',
-    'translate',
-    'waf',
-    'wafregional',
-    'wafv2',
-    'wellarchitected',
-    'workdocs',
-    'worklink',
-    'workmail',
-    'workmailmessageflow',
-    'workspaces',
-    'xray',
-]
+
+def generate_service_endpoints(args) -> Dict:
+    '''Generate service list from the schema of the currently used AWS package
+    '''
+    cmd_args = [PULUMI_CMD, "about", "--json"]
+    if args.cwd:
+        cmd_args.extend(("--cwd", args.cwd))
+    try:
+        sp = subprocess.run(executable=PULUMI_CMD, args=cmd_args, env=os.environ, stdout=subprocess.PIPE, check=True)
+    except subprocess.CalledProcessError as e:
+        exit(e.returncode)
+    plugins = json.loads(sp.stdout.decode("utf-8")).get("plugins")
+    try:
+        version = "@" + next(filter(lambda plugin: plugin["name"] == "aws", plugins)).get("version")
+    except (TypeError, StopIteration):
+        version = ""
+    config_args = [PULUMI_CMD, "package", "get-schema", f"aws{version}"]
+    try:
+        sp = subprocess.run(executable=PULUMI_CMD, args=config_args, env=os.environ, stdout=subprocess.PIPE, check=True)
+    except subprocess.CalledProcessError as e:
+        exit(e.returncode)
+    schema = json.loads(sp.stdout.decode("utf-8"))
+    services = list(schema['types']['aws:config/endpoints:endpoints']['properties'].keys())
+    return services
 
 
-def get_service_endpoint():
+def get_service_endpoint() -> str:
     protocol = 'https' if USE_SSL else 'http'
     endpoint = '%s://%s:%s' % (protocol, LOCALSTACK_HOSTNAME, EDGE_PORT)
     return endpoint
+
+
+def set_config_options(is_path: bool = False, is_secret: bool = False, **kwargs: Dict) -> List:
+    args = []
+    for option, value in kwargs.items():
+        if is_path:
+            args.append("--path")
+        if is_secret:
+            args.append("--secret")
+        else:
+            args.append("--plaintext")
+        args.append(f"{option}={value}")
+    return args
 
 
 def set_localstack_pulumi_config(args: argparse.Namespace):
@@ -349,33 +84,39 @@ def set_localstack_pulumi_config(args: argparse.Namespace):
     config_args.append(PULUMI_CMD)
     config_args.append("config")
     # If stack arg was supplied, add it to config command
-    if args.stack is not None:
+    if args.stack:
         config_args.append("--stack")
         config_args.append(args.stack)
     # If cwd arg was supplied, add it to config command
-    if args.cwd is not None:
+    if args.cwd:
         config_args.append("--cwd")
         config_args.append(args.cwd)
     config_args.append("set-all")
-    config_args.append("--plaintext")
-    config_args.append("aws:region=us-east-1")
-    config_args.append("--plaintext")
-    config_args.append("aws:accessKey=test")
-    config_args.append("--plaintext")
-    config_args.append("aws:secretKey=test")
-    config_args.append("--plaintext")
-    config_args.append("aws:s3UsePathStyle=true")
-    config_args.append("--plaintext")
-    config_args.append("aws:skipCredentialsValidation=true")
-    config_args.append("--plaintext")
-    config_args.append("aws:skipRequestingAccountId=true")
-    # Add the AWS Endpoints list
-    for idx, service in enumerate(SERVICES):
-        config_args.append("--path")
-        config_args.append("--plaintext")
-        config_args.append(f"aws:endpoints[{idx}].{service}={service_url}")
-    process = subprocess.Popen(executable=PULUMI_CMD, args=config_args, env=os.environ, stdout=subprocess.PIPE)
-    process.wait()
+
+    # Resetting all endpoints
+    try:
+        subprocess.run(executable=PULUMI_CMD, args=(config_args + set_config_options(is_path=True, **{"aws:endpoints": ""})), env=os.environ, stdout=subprocess.PIPE, check=True)
+    except subprocess.CalledProcessError as e:
+        exit(e.returncode)
+    except FileNotFoundError as e:
+        print(e)
+        exit(e.errno)
+
+    DEFAULT_CONFIG_ARGS = {
+        "aws:region": "us_east-1",
+        "aws:accessKey": "test",
+        "aws:secretKey": "test",
+        "aws:s3UsePathStyle": "true",
+        "aws:skipCredentialsValidation": "true",
+        "aws:skipRequestingAccountId": "true",
+    }
+    config_args.extend(set_config_options(**DEFAULT_CONFIG_ARGS))
+    for idx, service in enumerate(generate_service_endpoints(args)):
+        config_args.extend(set_config_options(is_path=True, **{f"aws:endpoints[{idx}].{service}": service_url}))
+    try:
+        subprocess.run(executable=PULUMI_CMD, args=config_args, env=os.environ, stdout=subprocess.PIPE, check=True)
+    except subprocess.CalledProcessError as e:
+        exit(e.returncode)
 
 
 def main():
@@ -389,7 +130,7 @@ def main():
     parser.add_argument("-C", "--cwd", help="run in this directory",
                         required=False,
                         type=str)
-    args, extra = parser.parse_known_args()
+    args, _ = parser.parse_known_args()
 
     # If this is a pulumi deployment command, update the stack with LocalStack AWS config
     if args.command in ["up", "destroy", "preview", "cancel"]:
