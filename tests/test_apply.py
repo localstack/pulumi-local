@@ -4,29 +4,32 @@ import tempfile
 import uuid
 from typing import Dict
 import boto3
+import pytest
 
 THIS_PATH = os.path.abspath(os.path.dirname(__file__))
 ROOT_PATH = os.path.join(THIS_PATH, "..")
 PULUMILOCAL_BIN = os.path.join(ROOT_PATH, "bin", "pulumilocal")
 LOCALSTACK_ENDPOINT = "http://localhost:4566"
 
-
-def test_successful_provisioning():
+@pytest.mark.parametrize("package_version", ["5.42.0", "latest"])
+def test_successful_provisioning(package_version: str):
     # create bucket
     bucket_name = short_uid()
-    create_test_bucket(bucket_name)
+    create_test_bucket(bucket_name, package_version)
     s3_bucket_names = get_bucket_names()
 
     # Pulumi adds suffix to the bucket's name so not enough simply checking for the name in the list
     assert any(s3_bucket.startswith(bucket_name) for s3_bucket in s3_bucket_names)
 
-
-def test_service_endpoints():
+# Running tests pinned onto previous major version as the package's performance has significant issues
+# with large number of local endpoints on 6.x
+@pytest.mark.parametrize("package_version", ["5.42.0"])
+def test_service_endpoints(package_version):
     # create bucket
     bucket_name = short_uid()
     error_message = "Invalid or unknown key. Check `pulumi config get aws:endpoints`."
 
-    assert error_message not in create_test_bucket(bucket_name), \
+    assert error_message not in create_test_bucket(bucket_name, package_version), \
         "Endpoints list is not up-to-date."
 
 ###
@@ -34,7 +37,7 @@ def test_service_endpoints():
 ###
 
 
-def deploy_pulumi_script(script: str, env_vars: Dict[str, str] = None) -> str:
+def deploy_pulumi_script(script: str, version: str = "latest", env_vars: Dict[str, str] = None) -> str:
     with tempfile.TemporaryDirectory() as temp_dir:
         kwargs = {"cwd": temp_dir}
         env_vars.update({
@@ -43,7 +46,7 @@ def deploy_pulumi_script(script: str, env_vars: Dict[str, str] = None) -> str:
         kwargs["env"] = {**os.environ, **(env_vars or {})}
 
         run([PULUMILOCAL_BIN, "new", "typescript", "-y", "-s", "test", "--cwd", temp_dir], **kwargs)
-        run(["npm", "install", "@pulumi/aws", "--prefix", temp_dir], **kwargs)
+        run(["npm", "install", f"@pulumi/aws{'@'+ version}", "--prefix", temp_dir], **kwargs)
         with open(os.path.join(temp_dir, "index.ts"), "w") as f:
             f.write(script)
         run([PULUMILOCAL_BIN, "stack", "select", "-c", "test", "--cwd", temp_dir], **kwargs)
@@ -51,7 +54,7 @@ def deploy_pulumi_script(script: str, env_vars: Dict[str, str] = None) -> str:
         return out
 
 
-def create_test_bucket(bucket_name: str) -> str:
+def create_test_bucket(bucket_name: str, version: str = "latest") -> str:
     config = """import * as pulumi from "@pulumi/pulumi";
 import * as aws from "@pulumi/aws";
 
@@ -61,12 +64,13 @@ export const bucketName = bucket.id;
 """ % (bucket_name)
     return deploy_pulumi_script(
         config,
+        version=version,
         env_vars={"PULUMI_CONFIG_PASSPHRASE": "localstack"}
     )
 
 
 def get_bucket_names(**kwargs: dict) -> list:
-    s3 = client("s3", region_name="eu-west-1", **kwargs)
+    s3 = client("s3", region_name="us-east-1", **kwargs)
     s3_buckets = s3.list_buckets().get("Buckets")
     return [s["Name"] for s in s3_buckets]
 
