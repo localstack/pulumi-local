@@ -103,7 +103,7 @@ def set_localstack_pulumi_config(args: argparse.Namespace):
         exit(e.errno)
 
     DEFAULT_CONFIG_ARGS = {
-        "aws:region": "us_east-1",
+        "aws:region": "us-east-1",
         "aws:accessKey": "test",
         "aws:secretKey": "test",
         "aws:s3UsePathStyle": "true",
