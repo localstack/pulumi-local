@@ -26,15 +26,21 @@ def test_provisioning(package_version: str, select_stack: bool, select_cwd: bool
     assert any(s3_bucket.startswith(bucket_name) for s3_bucket in s3_bucket_names)
 
 
+def test_provisioning_outside_project():
+    # create bucket
+    bucket_name = short_uid()
+    assert "error: no Pulumi.yaml project file found" in create_test_bucket(bucket_name, should_fail=True)
+
+
 ###
 # UTIL FUNCTIONS
 ###
 
 
-def deploy_pulumi_script(script: str, version: str, select_stack: bool, select_cwd: bool, env_vars: Dict[str, str] = None) -> str:
+def deploy_pulumi_script(script: str, version: str, select_stack: bool, select_cwd: bool, env_vars: Dict[str, str] = None, should_fail: bool = False) -> str:
     kwargs = {}
     with tempfile.TemporaryDirectory() as temp_dir:
-        if not select_cwd:
+        if not select_cwd and not should_fail:
             kwargs["cwd"] = temp_dir
         env_vars.update({
             "PULUMI_BACKEND_URL": f"file://{temp_dir}"
@@ -54,23 +60,26 @@ def deploy_pulumi_script(script: str, version: str, select_stack: bool, select_c
         with open(os.path.join(temp_dir, "index.ts"), "w") as f:
             f.write(script)
 
-        cmd = [PULUMILOCAL_BIN, "preview", "-y"]
-        if select_stack:
+        # To test short switches too
+        cmd = [PULUMILOCAL_BIN, "preview"]
+        if select_stack and not should_fail:
             cmd.extend(["-s", "test"])
-        if select_cwd:
+        if select_cwd and not should_fail:
             cmd.extend(["-C", temp_dir])
         out = run(cmd, **kwargs)
+        if out[0]:
+            return out[1]
 
         cmd = [PULUMILOCAL_BIN, "up", "-y"]
-        if select_stack:
+        if select_stack and not should_fail:
             cmd.extend(["--stack", "test"])
-        if select_cwd:
+        if select_cwd and not should_fail:
             cmd.extend(["--cwd", temp_dir])
         out = run(cmd, **kwargs)
         return out[1]
 
 
-def create_test_bucket(bucket_name: str, version: str, select_stack: bool, select_cwd: bool) -> str:
+def create_test_bucket(bucket_name: str, version: str = "latest", select_stack: bool = False, select_cwd: bool = False, should_fail: bool = False) -> str:
     config = """import * as pulumi from "@pulumi/pulumi";
 import * as aws from "@pulumi/aws";
 
@@ -83,7 +92,8 @@ export const bucketName = bucket.id;
         version=version,
         select_stack=select_stack,
         select_cwd=select_cwd,
-        env_vars={"PULUMI_CONFIG_PASSPHRASE": "localstack"}
+        env_vars={"PULUMI_CONFIG_PASSPHRASE": "localstack"},
+        should_fail=should_fail,
     )
 
 
