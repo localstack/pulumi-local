@@ -2,7 +2,7 @@ import os
 import subprocess
 import tempfile
 import uuid
-from typing import Dict
+from typing import Dict, Tuple
 import boto3
 import pytest
 
@@ -12,51 +12,65 @@ PULUMILOCAL_BIN = os.path.join(ROOT_PATH, "bin", "pulumilocal")
 LOCALSTACK_ENDPOINT = "http://localhost:4566"
 
 
-@pytest.mark.parametrize("package_version", ["5.42.0", "latest"])
-def test_successful_provisioning(package_version: str):
+# Removed latest version and pinning tests to 5.42.0 as pulumi/aws has serious performance issues
+@pytest.mark.parametrize("package_version", ["5.42.0"])
+@pytest.mark.parametrize("select_stack", [True, False])
+@pytest.mark.parametrize("select_cwd", [True, False])
+def test_provisioning(package_version: str, select_stack: bool, select_cwd: bool):
     # create bucket
     bucket_name = short_uid()
-    create_test_bucket(bucket_name, package_version)
+    create_test_bucket(bucket_name, package_version, select_stack, select_cwd)
     s3_bucket_names = get_bucket_names()
 
     # Pulumi adds suffix to the bucket's name so not enough simply checking for the name in the list
     assert any(s3_bucket.startswith(bucket_name) for s3_bucket in s3_bucket_names)
 
 
-# Running tests pinned onto previous major version as the package's performance has significant issues
-# with large number of local endpoints on 6.x
-@pytest.mark.parametrize("package_version", ["5.42.0"])
-def test_service_endpoints(package_version):
-    # create bucket
-    bucket_name = short_uid()
-    error_message = "Invalid or unknown key. Check `pulumi config get aws:endpoints`."
-
-    assert error_message not in create_test_bucket(bucket_name, package_version), \
-        "Endpoints list is not up-to-date."
-
 ###
 # UTIL FUNCTIONS
 ###
 
 
-def deploy_pulumi_script(script: str, version: str = "latest", env_vars: Dict[str, str] = None) -> str:
+def deploy_pulumi_script(script: str, version: str, select_stack: bool, select_cwd: bool, env_vars: Dict[str, str] = None) -> str:
+    kwargs = {}
     with tempfile.TemporaryDirectory() as temp_dir:
-        kwargs = {"cwd": temp_dir}
+        if not select_cwd:
+            kwargs["cwd"] = temp_dir
         env_vars.update({
             "PULUMI_BACKEND_URL": f"file://{temp_dir}"
         })
         kwargs["env"] = {**os.environ, **(env_vars or {})}
 
-        run([PULUMILOCAL_BIN, "new", "typescript", "-y", "-s", "test", "--cwd", temp_dir], **kwargs)
-        run(["npm", "install", f"@pulumi/aws{'@'+ version}", "--prefix", temp_dir], **kwargs)
+        cmd = [PULUMILOCAL_BIN, "new", "typescript", "-y", "-s", "test", "--cwd", temp_dir]
+        out = run(cmd, **kwargs)
+        if out[0]:
+            return out[1]
+
+        cmd = ["npm", "install", f"@pulumi/aws{'@'+ version}", "--prefix", temp_dir]
+        out = run(cmd, **kwargs)
+        if out[0]:
+            return out[1]
+
         with open(os.path.join(temp_dir, "index.ts"), "w") as f:
             f.write(script)
-        run([PULUMILOCAL_BIN, "stack", "select", "-c", "test", "--cwd", temp_dir], **kwargs)
-        out = run([PULUMILOCAL_BIN, "up", "--cwd", temp_dir, "-y"], **kwargs)
-        return out
+
+        cmd = [PULUMILOCAL_BIN, "preview", "-y"]
+        if select_stack:
+            cmd.extend(["-s", "test"])
+        if select_cwd:
+            cmd.extend(["-C", temp_dir])
+        out = run(cmd, **kwargs)
+
+        cmd = [PULUMILOCAL_BIN, "up", "-y"]
+        if select_stack:
+            cmd.extend(["--stack", "test"])
+        if select_cwd:
+            cmd.extend(["--cwd", temp_dir])
+        out = run(cmd, **kwargs)
+        return out[1]
 
 
-def create_test_bucket(bucket_name: str, version: str = "latest") -> str:
+def create_test_bucket(bucket_name: str, version: str, select_stack: bool, select_cwd: bool) -> str:
     config = """import * as pulumi from "@pulumi/pulumi";
 import * as aws from "@pulumi/aws";
 
@@ -67,6 +81,8 @@ export const bucketName = bucket.id;
     return deploy_pulumi_script(
         config,
         version=version,
+        select_stack=select_stack,
+        select_cwd=select_cwd,
         env_vars={"PULUMI_CONFIG_PASSPHRASE": "localstack"}
     )
 
@@ -96,9 +112,11 @@ def client(service: str, **kwargs):
     )
 
 
-def run(cmd, **kwargs) -> str:
+def run(cmd, **kwargs) -> Tuple:
     try:
-        kwargs["stderr"] = subprocess.PIPE
-        return subprocess.check_output(cmd, **kwargs).decode("utf-8")
+        kwargs["stderr"] = subprocess.STDOUT
+        kwargs["stdout"] = subprocess.PIPE
+        sp = subprocess.run(cmd, **kwargs, check=True)
+        return (sp.returncode, sp.stdout.decode("utf-8"))
     except subprocess.CalledProcessError as e:
-        return e.output.decode("utf-8")
+        return (e.returncode, e.stdout.decode("utf-8"))

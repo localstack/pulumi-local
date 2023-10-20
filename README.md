@@ -1,6 +1,7 @@
 # Pulumi CLI for LocalStack
 
 **<u>DISCLAIMER</u>: pulumi-local currently does not support the _aws-native_ package. ([pulumi/pulumi-aws-native #108](https://github.com/pulumi/pulumi-aws-native/issues/108))**
+**<u>DISCLAIMER</u>: due to the degraded performance of _pulumi-aws@6.x_ with local endpoints, we highly recommend to all our users to pin their package version _<=5.42.0_. ([pulumi/pulumi-aws #2880](https://github.com/pulumi/pulumi-aws/issues/2880))**
 
 This package provides the `pulumilocal` command, which is a thin wrapper around the `pulumi`
 command line interface to use [`Pulumi`](https://github.com/pulumi/pulumi) with [LocalStack](https://github.com/localstack/localstack).
