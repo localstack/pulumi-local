@@ -11,6 +11,7 @@ ROOT_PATH = os.path.join(THIS_PATH, "..")
 PULUMILOCAL_BIN = os.path.join(ROOT_PATH, "bin", "pulumilocal")
 LOCALSTACK_ENDPOINT = "http://localhost:4566"
 
+
 @pytest.mark.parametrize("package_version", ["5.42.0", "latest"])
 def test_successful_provisioning(package_version: str):
     # create bucket
@@ -20,6 +21,7 @@ def test_successful_provisioning(package_version: str):
 
     # Pulumi adds suffix to the bucket's name so not enough simply checking for the name in the list
     assert any(s3_bucket.startswith(bucket_name) for s3_bucket in s3_bucket_names)
+
 
 # Running tests pinned onto previous major version as the package's performance has significant issues
 # with large number of local endpoints on 6.x
