@@ -23,12 +23,16 @@ The `pulumilocal` command has the same usage as the `pulumi` command. For detail
 please refer to the man pages of `pulumi -h`.
 
 For example:
-### Add environment variables to store state on a local backend (optional)
+
+### Add environment variables to store state on local backend (optional)
 ```shell
 export PULUMI_CONFIG_PASSPHRASE=lsdevtest
 export PULUMI_BACKEND_URL=file://`pwd`/myproj
 ```
-_Note: For further options please consult the [official documentation](https://www.pulumi.com/docs/cli/environment-variables/)._
+_Note: For further options please consult the official documentation on available [environment variables][env_vars] and [local backend][local_backend]._
+
+[env_vars]: https://www.pulumi.com/docs/cli/environment-variables/
+[local_backend]: https://www.pulumi.com/docs/concepts/state/#local-filesystem
 
 ### Create a new Pulumi Project with Stack name lsdev
 ```shell
