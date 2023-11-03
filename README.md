@@ -22,8 +22,6 @@ Please make sure you have a LocalStack instance running on your local machine.
 The `pulumilocal` command has the same usage as the `pulumi` command. For detailed usage,
 please refer to the man pages of `pulumi -h`.
 
-For example:
-
 ### Add environment variables to store state on local backend (optional)
 ```shell
 export PULUMI_CONFIG_PASSPHRASE=lsdevtest
@@ -34,14 +32,14 @@ _Note: For further options please consult the official documentation on availabl
 [env_vars]: https://www.pulumi.com/docs/cli/environment-variables/
 [local_backend]: https://www.pulumi.com/docs/concepts/state/#local-filesystem
 
-### Create a new Pulumi Project with stack name lsdev
+### Create a new Pulumi project with stack name lsdev
 ```shell
 mkdir myproj
 pulumilocal new typescript -y -s lsdev --cwd myproj
 ```
 _Note: `--cwd` switch is unnecessary if commands are being run in project directory._
 
-### Select and Create the lsdev Pulumi stack
+### Select and create the lsdev Pulumi stack
 This is unnecessary if you just did the `new typescript` command above as it will already be selected.
 ```shell
 pulumilocal stack select -c lsdev --cwd myproj
