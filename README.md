@@ -34,17 +34,20 @@ export PULUMI_BACKEND_URL=file://`pwd`/myproj
 mkdir myproj
 pulumilocal new typescript -y -s lsdev --cwd myproj
 ```
+_Note: `--cwd` switch is unnecessary if command run in project directory_
 
 ### Select and Create the lsdev Pulumi Stack
 This is unnecessary if you just did the `new typescript` command above as it will already be selected.
 ```shell
 pulumilocal stack select -c lsdev --cwd myproj
 ```
+_Note: `--cwd` switch is unnecessary if command run in project directory_
 
 ### Deploy the stack to LocalStack
 ```shell
 pulumilocal up --cwd myproj
 ```
+_Note: `--cwd` switch is unnecessary if command run in project directory_
 
 ## How it works
 
