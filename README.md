@@ -28,6 +28,7 @@ For example:
 export PULUMI_CONFIG_PASSPHRASE=lsdevtest
 export PULUMI_BACKEND_URL=file://`pwd`/myproj
 ```
+_Note: For further options please consult the [official documentation](https://www.pulumi.com/docs/cli/environment-variables/)._
 
 ### Create a new Pulumi Project with Stack name lsdev
 ```shell
