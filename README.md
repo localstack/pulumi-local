@@ -23,11 +23,15 @@ The `pulumilocal` command has the same usage as the `pulumi` command. For detail
 please refer to the man pages of `pulumi -h`.
 
 For example:
+### Add environment variables to store state on a local backend (optional)
+```shell
+export PULUMI_CONFIG_PASSPHRASE=lsdevtest
+export PULUMI_BACKEND_URL=file://`pwd`/myproj
+```
+
 ### Create a new Pulumi Project with Stack name lsdev
 ```shell
 mkdir myproj
-export PULUMI_CONFIG_PASSPHRASE=lsdevtest
-export PULUMI_BACKEND_URL=file://`pwd`/myproj
 pulumilocal new typescript -y -s lsdev --cwd myproj
 ```
 
