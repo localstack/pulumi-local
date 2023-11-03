@@ -34,25 +34,23 @@ _Note: For further options please consult the official documentation on availabl
 [env_vars]: https://www.pulumi.com/docs/cli/environment-variables/
 [local_backend]: https://www.pulumi.com/docs/concepts/state/#local-filesystem
 
-### Create a new Pulumi Project with Stack name lsdev
+### Create a new Pulumi Project with stack name lsdev
 ```shell
 mkdir myproj
 pulumilocal new typescript -y -s lsdev --cwd myproj
 ```
-_Note: `--cwd` switch is unnecessary if command run in project directory_
+_Note: `--cwd` switch is unnecessary if commands are being run in project directory._
 
-### Select and Create the lsdev Pulumi Stack
+### Select and Create the lsdev Pulumi stack
 This is unnecessary if you just did the `new typescript` command above as it will already be selected.
 ```shell
 pulumilocal stack select -c lsdev --cwd myproj
 ```
-_Note: `--cwd` switch is unnecessary if command run in project directory_
 
 ### Deploy the stack to LocalStack
 ```shell
 pulumilocal up --cwd myproj
 ```
-_Note: `--cwd` switch is unnecessary if command run in project directory_
 
 ## How it works
 
