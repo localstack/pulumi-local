@@ -71,6 +71,7 @@ Change the `pulumilocal` command in the instructions above to `pulumi`.
 
 ## Change Log
 
+* v1.2.1: Add support for AWS_ENDPOINT_URL env variable
 * v1.2.0: Added dynamic endpoint generation and tests
 * v1.1: Added README to long description and update twine publish.
 * v1.0: Using `pulumi config set-all` to set all the AWS provider configurating instead of modifying
