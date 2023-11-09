@@ -27,7 +27,7 @@ PULUMI_CMD = os.environ.get('PULUMI_CMD') or 'pulumi'
 AWS_ENDPOINT_URL = os.environ.get("AWS_ENDPOINT_URL")
 LOCALSTACK_HOSTNAME = urlparse(os.environ.get('AWS_ENDPOINT_URL')).hostname or os.environ.get("LOCALSTACK_HOSTNAME") or 'localhost'
 EDGE_PORT = int(urlparse(os.environ.get('AWS_ENDPOINT_URL')).port or os.environ.get('EDGE_PORT') or '4566')
-USE_SSL = os.environ.get('USE_SSL').strip().lower() in TRUE_STRINGS
+USE_SSL = str(os.environ.get('USE_SSL')).strip().lower() in TRUE_STRINGS
 
 # Do not allow PULUMI_CMD env var to be set to pulumilocal as this causes an error
 if PULUMI_CMD == "pulumilocal":
