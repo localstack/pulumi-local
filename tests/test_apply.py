@@ -12,8 +12,7 @@ PULUMILOCAL_BIN = os.path.join(ROOT_PATH, "bin", "pulumilocal")
 LOCALSTACK_ENDPOINT = "http://localhost:4566"
 
 
-# Removed latest version and pinning tests to 5.42.0 as pulumi/aws has serious performance issues
-@pytest.mark.parametrize("package_version", ["5.42.0"])
+@pytest.mark.parametrize("package_version", ["5.42.0", "latest"])
 @pytest.mark.parametrize("select_stack", [True, False])
 @pytest.mark.parametrize("select_cwd", [True, False])
 def test_provisioning(package_version: str, select_stack: bool, select_cwd: bool):
