@@ -60,8 +60,9 @@ and then runs the original pulumi command.
 
 You can configure the following environment variables:
 
-* `LOCALSTACK_HOSTNAME`: Target host to use for connecting to LocalStack (default: `localhost`)
-* `EDGE_PORT`: Target port to use for connecting to LocalStack (default: `4566`)
+* `AWS_ENDPOINT_URL`: hostname and port of the target LocalStack instance
+* `LOCALSTACK_HOSTNAME`: __(Deprecated)__ Target host to use for connecting to LocalStack (default: `localhost`)
+* `EDGE_PORT`: __(Deprecated)__ Target port to use for connecting to LocalStack (default: `4566`)
 * `PULUMI_CMD`: Name of the executable Pulumi command on the system PATH (default: `pulumi`)
 
 ## Deploying to AWS
@@ -70,6 +71,7 @@ Change the `pulumilocal` command in the instructions above to `pulumi`.
 
 ## Change Log
 
+* v1.2.1: Add support for AWS_ENDPOINT_URL env variable
 * v1.2.0: Added dynamic endpoint generation and tests
 * v1.1: Added README to long description and update twine publish.
 * v1.0: Using `pulumi config set-all` to set all the AWS provider configurating instead of modifying

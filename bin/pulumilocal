@@ -14,18 +14,20 @@ import argparse
 import subprocess
 import json
 from typing import Dict, List
+from urllib.parse import urlparse
 
 # for local testing
-PARENT_FOLDER = os.path.realpath(os.path.join(os.path.dirname(__file__), '..'))
-if os.path.isdir(os.path.join(PARENT_FOLDER, '.venv')):
+PARENT_FOLDER = os.path.realpath(os.path.join(os.path.dirname(__file__), ".."))
+if os.path.isdir(os.path.join(PARENT_FOLDER, ".venv")):
     sys.path.insert(0, PARENT_FOLDER)
 
 # define global constants
-TRUE_STRINGS = ['1', 'true', 'True']
-PULUMI_CMD = os.environ.get('PULUMI_CMD') or 'pulumi'
-LOCALSTACK_HOSTNAME = os.environ.get('LOCALSTACK_HOSTNAME') or 'localhost'
-EDGE_PORT = int(os.environ.get('EDGE_PORT') or '4566')
-USE_SSL = os.environ.get('USE_SSL') in TRUE_STRINGS
+TRUE_STRINGS = ["1", "true"]
+PULUMI_CMD = os.environ.get("PULUMI_CMD") or "pulumi"
+AWS_ENDPOINT_URL = os.environ.get("AWS_ENDPOINT_URL")
+LOCALSTACK_HOSTNAME = urlparse(os.environ.get("AWS_ENDPOINT_URL")).hostname or os.environ.get("LOCALSTACK_HOSTNAME") or "localhost"
+EDGE_PORT = int(urlparse(os.environ.get("AWS_ENDPOINT_URL")).port or os.environ.get("EDGE_PORT") or 4566)
+USE_SSL = str(os.environ.get("USE_SSL")).strip().lower() in TRUE_STRINGS
 
 # Do not allow PULUMI_CMD env var to be set to pulumilocal as this causes an error
 if PULUMI_CMD == "pulumilocal":
@@ -33,8 +35,8 @@ if PULUMI_CMD == "pulumilocal":
 
 
 def generate_service_endpoints(args) -> Dict:
-    '''Generate service list from the schema of the currently used AWS package
-    '''
+    """Generate service list from the schema of the currently used AWS package
+    """
     cmd_args = [PULUMI_CMD, "about", "--json"]
     if args.cwd:
         cmd_args.extend(("--cwd", args.cwd))
@@ -53,13 +55,13 @@ def generate_service_endpoints(args) -> Dict:
     except subprocess.CalledProcessError as e:
         exit(e.returncode)
     schema = json.loads(sp.stdout.decode("utf-8"))
-    services = list(schema['types']['aws:config/endpoints:endpoints']['properties'].keys())
+    services = list(schema["types"]["aws:config/endpoints:endpoints"]["properties"].keys())
     return services
 
 
 def get_service_endpoint() -> str:
-    protocol = 'https' if USE_SSL else 'http'
-    endpoint = '%s://%s:%s' % (protocol, LOCALSTACK_HOSTNAME, EDGE_PORT)
+    protocol = "https" if USE_SSL else "http"
+    endpoint = "%s://%s:%s" % (protocol, LOCALSTACK_HOSTNAME, EDGE_PORT)
     return endpoint
 
 
@@ -140,5 +142,5 @@ def main():
     return os.execvp(PULUMI_CMD, sys.argv)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
