@@ -23,15 +23,44 @@ if os.path.isdir(os.path.join(PARENT_FOLDER, ".venv")):
 
 # define global constants
 TRUE_STRINGS = ["1", "true"]
+DEFAULT_CONFIG_STRATEGY = "overwrite"
+CONFIG_STRATEGIES = ("overwrite", "merge", "separate")
 PULUMI_CMD = os.environ.get("PULUMI_CMD") or "pulumi"
 AWS_ENDPOINT_URL = os.environ.get("AWS_ENDPOINT_URL")
 LOCALSTACK_HOSTNAME = urlparse(os.environ.get("AWS_ENDPOINT_URL")).hostname or os.environ.get("LOCALSTACK_HOSTNAME") or "localhost"
 EDGE_PORT = int(urlparse(os.environ.get("AWS_ENDPOINT_URL")).port or os.environ.get("EDGE_PORT") or 4566)
 USE_SSL = str(os.environ.get("USE_SSL")).strip().lower() in TRUE_STRINGS
+CONFIG_STRATEGY = os.environ.get("CONFIG_STRATEGY") or DEFAULT_CONFIG_STRATEGY
 
 # Do not allow PULUMI_CMD env var to be set to pulumilocal as this causes an error
 if PULUMI_CMD == "pulumilocal":
     PULUMI_CMD = "pulumi"
+
+
+def get_stack_config_file_path(args: argparse.Namespace) -> str:
+    """Determine the path under which the stack config file should exist"""
+    if args.config_file and os.path.isabs(args.config_file):
+        return args.config_file
+    
+    base_dir = args.cwd or "."
+    stack_config = args.config_file or f"Pulumi.{args.stack}.yaml"
+    
+    return os.path.join(os.path.abspath(base_dir), stack_config)
+
+
+def check_stack_config_file(stack_config: str) -> None:
+    """Checks stack config file existance"""
+    if os.path.exists(stack_config):
+        msg = f"Stack config file {stack_config} already exists"
+        err_msg = msg + " - please delete it first, exiting..."
+        if CONFIG_STRATEGY == "overwrite":
+            msg += ". File will be overwritten."
+            print(msg)
+            print("\tOnly 'yes' will be accepted to approve.")
+            if input("\tEnter a value: ") == "yes":
+                return
+        print(err_msg)
+        exit(1)
 
 
 def generate_service_endpoints(args) -> Dict:
@@ -93,6 +122,9 @@ def set_localstack_pulumi_config(args: argparse.Namespace):
     if args.cwd:
         config_args.append("--cwd")
         config_args.append(args.cwd)
+    if args.config_file:
+        config_args.append("--config-file")
+        config_args.append(args.config_file)
     config_args.append("set-all")
 
     # Resetting all endpoints
@@ -132,10 +164,20 @@ def main():
     parser.add_argument("-C", "--cwd", help="run in this directory",
                         required=False,
                         type=str)
+    parser.add_argument("--config-file", help="pulumi stack config to use",
+                        required=False,
+                        type=str)
     args, _ = parser.parse_known_args()
 
     # If this is a pulumi deployment command, update the stack with LocalStack AWS config
     if args.command in ["up", "destroy", "preview", "cancel"]:
+        if not args.stack:
+            try:
+                args.stack = subprocess.run([PULUMI_CMD, "stack", "--show-name", "--non-interactive"], env=os.environ, check=True, capture_output=True).stdout.decode("utf-8").strip("\n")
+            except (subprocess.CalledProcessError) as e:
+                print(e.stderr.decode("utf-8"))
+                exit(1)
+        check_stack_config_file(get_stack_config_file_path(args))
         print("Updating this Stack with LocalStack config")
         set_localstack_pulumi_config(args)
     # Run the original command
