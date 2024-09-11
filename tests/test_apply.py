@@ -51,7 +51,7 @@ def deploy_pulumi_script(script: str, version: str, select_stack: bool, select_c
         if out[0]:
             return out[1]
 
-        cmd = ["npm", "install", f"@pulumi/aws{'@'+ version}", "--prefix", temp_dir]
+        cmd = ["npm", "install", f"@pulumi/aws{'@' + version}", "--prefix", temp_dir]
         out = run(cmd, **kwargs)
         if out[0]:
             return out[1]

@@ -35,5 +35,7 @@ test: venv       	## Run unit/integration tests
 
 clean:             	## Clean up
 	rm -rf $(VENV_DIR)
+	rm -rf dist
+	rm -rf *.egg-info
 
 .PHONY: clean publish install usage lint test venv
