@@ -44,11 +44,11 @@ def get_stack_config_file_path(args: argparse.Namespace) -> str:
     """Determine the path under which the stack config file should exist"""
     if args.config_file and os.path.isabs(args.config_file):
         return args.config_file
-    
+
     base_dir = args.cwd or "."
     stack_config = args.config_file or f"Pulumi.{args.stack}.yaml"
-    
-    return os.path.join(os.path.abspath(base_dir), stack_config)
+
+    return os.path.join(base_dir, stack_config)
 
 
 def check_stack_config_file(stack_config: str) -> None:
@@ -174,7 +174,7 @@ def main():
                         action="store_true",
                         required=False)
     args, _ = parser.parse_known_args()
-    
+
     if NON_INTERACTIVE:
         args.non_interactive = True
 
@@ -191,9 +191,10 @@ def main():
         print("Updating this Stack with LocalStack config")
         set_localstack_pulumi_config(args)
     # Run the original command
-    if args.non_interactive and "--non-interactive" not in sys.argv:
-        sys.argv.append("--non-interactive")
-    return os.execvp(PULUMI_CMD, sys.argv)
+    if DRY_RUN:
+        if args.non_interactive and "--non-interactive" not in sys.argv:
+            sys.argv.append("--non-interactive")
+        return os.execvp(PULUMI_CMD, sys.argv)
 
 
 if __name__ == "__main__":
