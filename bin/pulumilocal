@@ -23,14 +23,17 @@ if os.path.isdir(os.path.join(PARENT_FOLDER, ".venv")):
 
 # define global constants
 TRUE_STRINGS = ["1", "true"]
-DEFAULT_CONFIG_STRATEGY = "overwrite"
 CONFIG_STRATEGIES = ("overwrite", "merge", "separate")
+DEFAULT_CONFIG_STRATEGY = "overwrite"
+CONFIG_STRATEGY = os.environ.get("CONFIG_STRATEGY") or DEFAULT_CONFIG_STRATEGY
 PULUMI_CMD = os.environ.get("PULUMI_CMD") or "pulumi"
 AWS_ENDPOINT_URL = os.environ.get("AWS_ENDPOINT_URL")
 LOCALSTACK_HOSTNAME = urlparse(os.environ.get("AWS_ENDPOINT_URL")).hostname or os.environ.get("LOCALSTACK_HOSTNAME") or "localhost"
 EDGE_PORT = int(urlparse(os.environ.get("AWS_ENDPOINT_URL")).port or os.environ.get("EDGE_PORT") or 4566)
 USE_SSL = str(os.environ.get("USE_SSL")).strip().lower() in TRUE_STRINGS
-CONFIG_STRATEGY = os.environ.get("CONFIG_STRATEGY") or DEFAULT_CONFIG_STRATEGY
+DRY_RUN = str(os.environ.get("DRY_RUN")).strip().lower() in TRUE_STRINGS
+NON_INTERACTIVE = str(os.environ.get("NON_INTERACTIVE")).strip().lower() in TRUE_STRINGS
+
 
 # Do not allow PULUMI_CMD env var to be set to pulumilocal as this causes an error
 if PULUMI_CMD == "pulumilocal":
@@ -156,18 +159,24 @@ def set_localstack_pulumi_config(args: argparse.Namespace):
 def main():
     # Parse arguments from call to pulumi CLI that set the stack name and directory
     parser = argparse.ArgumentParser(add_help=False)
-    parser.add_argument("command", help="pulumi primary command",
+    parser.add_argument("command", help="Pulumi command",
                         type=str)
-    parser.add_argument("-s", "--stack", help="pulumi stack name",
+    parser.add_argument("-s", "--stack", help="The name of the stack to operate on. Defaults to the current stack",
                         required=False,
                         type=str)
-    parser.add_argument("-C", "--cwd", help="run in this directory",
+    parser.add_argument("-C", "--cwd", help="Run pulumi as if it had been started in another directory",
                         required=False,
                         type=str)
-    parser.add_argument("--config-file", help="pulumi stack config to use",
+    parser.add_argument("--config-file", help="Use the configuration values in the specified file rather than detecting the file name",
                         required=False,
                         type=str)
+    parser.add_argument("--non-interactive", help="Disable interactive mode for all commands",
+                        action="store_true",
+                        required=False)
     args, _ = parser.parse_known_args()
+    
+    if NON_INTERACTIVE:
+        args.non_interactive = True
 
     # If this is a pulumi deployment command, update the stack with LocalStack AWS config
     if args.command in ["up", "destroy", "preview", "cancel"]:
@@ -177,10 +186,13 @@ def main():
             except (subprocess.CalledProcessError) as e:
                 print(e.stderr.decode("utf-8"))
                 exit(1)
-        check_stack_config_file(get_stack_config_file_path(args))
+        if not args.non_interactive:
+            check_stack_config_file(get_stack_config_file_path(args))
         print("Updating this Stack with LocalStack config")
         set_localstack_pulumi_config(args)
     # Run the original command
+    if args.non_interactive and "--non-interactive" not in sys.argv:
+        sys.argv.append("--non-interactive")
     return os.execvp(PULUMI_CMD, sys.argv)
 
 
