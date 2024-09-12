@@ -91,7 +91,7 @@ export const bucketName = bucket.id;
         version=version,
         select_stack=select_stack,
         select_cwd=select_cwd,
-        env_vars={"PULUMI_CONFIG_PASSPHRASE": "localstack"},
+        env_vars={"PULUMI_CONFIG_PASSPHRASE": "localstack", "NON_INTERACTIVE": "1"},
         should_fail=should_fail,
     )
 

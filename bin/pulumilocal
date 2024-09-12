@@ -178,11 +178,19 @@ def main():
     if NON_INTERACTIVE:
         args.non_interactive = True
 
+    if not args.cwd:
+        args.cwd = "."
+
     # If this is a pulumi deployment command, update the stack with LocalStack AWS config
     if args.command in ["up", "destroy", "preview", "cancel"]:
         if not args.stack:
             try:
-                args.stack = subprocess.run([PULUMI_CMD, "stack", "--show-name", "--non-interactive"], env=os.environ, check=True, capture_output=True).stdout.decode("utf-8").strip("\n")
+                args.stack = subprocess.run(
+                    [PULUMI_CMD, "stack", "--show-name", "--non-interactive", "-C", args.cwd],
+                    env=os.environ,
+                    check=True,
+                    capture_output=True
+                ).stdout.decode("utf-8").strip("\n")
             except (subprocess.CalledProcessError) as e:
                 print(e.stderr.decode("utf-8"))
                 exit(1)
@@ -191,7 +199,7 @@ def main():
         print("Updating this Stack with LocalStack config")
         set_localstack_pulumi_config(args)
     # Run the original command
-    if DRY_RUN:
+    if not DRY_RUN:
         if args.non_interactive and "--non-interactive" not in sys.argv:
             sys.argv.append("--non-interactive")
         return os.execvp(PULUMI_CMD, sys.argv)
