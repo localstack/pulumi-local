@@ -14,6 +14,7 @@ import argparse
 import subprocess
 import json
 from typing import Dict, List
+from shutil import copyfile
 from urllib.parse import urlparse
 
 # for local testing
@@ -23,9 +24,10 @@ if os.path.isdir(os.path.join(PARENT_FOLDER, ".venv")):
 
 # define global constants
 TRUE_STRINGS = ["1", "true"]
-CONFIG_STRATEGIES = ("overwrite", "merge", "separate")
+CONFIG_STRATEGIES = ("overwrite", "override", "separation")
 DEFAULT_CONFIG_STRATEGY = "overwrite"
-CONFIG_STRATEGY = os.environ.get("CONFIG_STRATEGY") or DEFAULT_CONFIG_STRATEGY
+LOCAL_STACK_NAME = os.environ.get("LOCAL_STACK_NAME") or "localstack"
+CONFIG_STRATEGY = os.environ.get("CONFIG_STRATEGY") if os.environ.get("CONFIG_STRATEGY") in CONFIG_STRATEGIES else DEFAULT_CONFIG_STRATEGY
 PULUMI_CMD = os.environ.get("PULUMI_CMD") or "pulumi"
 AWS_ENDPOINT_URL = os.environ.get("AWS_ENDPOINT_URL")
 LOCALSTACK_HOSTNAME = urlparse(os.environ.get("AWS_ENDPOINT_URL")).hostname or os.environ.get("LOCALSTACK_HOSTNAME") or "localhost"
@@ -38,6 +40,12 @@ NON_INTERACTIVE = str(os.environ.get("NON_INTERACTIVE")).strip().lower() in TRUE
 # Do not allow PULUMI_CMD env var to be set to pulumilocal as this causes an error
 if PULUMI_CMD == "pulumilocal":
     PULUMI_CMD = "pulumi"
+
+
+def deactivate_access_key(access_key: str) -> str:
+    """Safe guarding user from accidental live credential usage by deactivating access key IDs.
+        See more: https://docs.localstack.cloud/references/credentials/"""
+    return "L" + access_key[1:] if access_key[0] == "A" else access_key
 
 
 def get_stack_config_file_path(args: argparse.Namespace) -> str:
@@ -128,11 +136,10 @@ def set_localstack_pulumi_config(args: argparse.Namespace):
     if args.config_file:
         config_args.append("--config-file")
         config_args.append(args.config_file)
-    config_args.append("set-all")
 
     # Resetting all endpoints
     try:
-        subprocess.run(executable=PULUMI_CMD, args=(config_args + set_config_options(is_path=True, **{"aws:endpoints": ""})), env=os.environ, stdout=subprocess.PIPE, check=True)
+        subprocess.run(executable=PULUMI_CMD, args=(config_args + ["set-all"] + set_config_options(is_path=True, **{"aws:endpoints": ""})), env=os.environ, stdout=subprocess.PIPE, check=True)
     except subprocess.CalledProcessError as e:
         exit(e.returncode)
     except FileNotFoundError as e:
@@ -147,6 +154,27 @@ def set_localstack_pulumi_config(args: argparse.Namespace):
         "aws:skipCredentialsValidation": "true",
         "aws:skipRequestingAccountId": "true",
     }
+
+    tmp = DEFAULT_CONFIG_ARGS.copy()
+    for k in DEFAULT_CONFIG_ARGS:
+        try:
+            output = subprocess.run(
+                executable=PULUMI_CMD,
+                args=(config_args + ["get", k]),
+                env=os.environ,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.DEVNULL,
+                check=True).stdout.decode("utf-8").strip("\n")
+        except subprocess.CalledProcessError:
+            pass
+        else:
+            if k == "aws:accessKey":
+                tmp[k] = deactivate_access_key(output)
+            elif k != "aws:secretKey":
+                del tmp[k]
+    DEFAULT_CONFIG_ARGS = tmp
+
+    config_args.append("set-all")
     config_args.extend(set_config_options(**DEFAULT_CONFIG_ARGS))
     for idx, service in enumerate(generate_service_endpoints(args)):
         config_args.extend(set_config_options(is_path=True, **{f"aws:endpoints[{idx}].{service}": service_url}))
@@ -181,6 +209,10 @@ def main():
     if not args.cwd:
         args.cwd = "."
 
+    if os.environ.get("CONFIG_STRATEGY") not in CONFIG_STRATEGIES:
+        print(f"Config strategy: {os.environ.get('CONFIG_STRATEGY')}")
+        print(f'Config strategy is not recognised. Falling back to default ("{DEFAULT_CONFIG_STRATEGY}").')
+
     # If this is a pulumi deployment command, update the stack with LocalStack AWS config
     if args.command in ["up", "destroy", "preview", "cancel"]:
         if not args.stack:
@@ -194,15 +226,40 @@ def main():
             except (subprocess.CalledProcessError) as e:
                 print(e.stderr.decode("utf-8"))
                 exit(1)
+        config_file_path = get_stack_config_file_path(args)
         if not args.non_interactive:
-            check_stack_config_file(get_stack_config_file_path(args))
+            check_stack_config_file(config_file_path)
+        if CONFIG_STRATEGY == "override":
+            override_config_file = os.path.join(os.path.dirname(config_file_path), f"Pulumi.{LOCAL_STACK_NAME}.yaml")
+            copyfile(src=config_file_path, dst=override_config_file)
+            args.config_file = override_config_file
+        elif CONFIG_STRATEGY == "separation":
+            print(f"Creating stack {LOCAL_STACK_NAME}, if not existing...")
+            subprocess.run(
+                [PULUMI_CMD, "stack", "init", "--non-interactive", "-s", LOCAL_STACK_NAME, "-C", args.cwd],
+                env=os.environ,
+                check=False,
+                stderr=subprocess.DEVNULL
+            )
+            override_config_file = os.path.join(os.path.dirname(config_file_path), f"Pulumi.{LOCAL_STACK_NAME}.yaml")
+            if override_config_file != config_file_path:
+                copyfile(src=config_file_path, dst=override_config_file)
+                args.config_file = override_config_file
         print("Updating this Stack with LocalStack config")
         set_localstack_pulumi_config(args)
     # Run the original command
     if not DRY_RUN:
         if args.non_interactive and "--non-interactive" not in sys.argv:
             sys.argv.append("--non-interactive")
-        return os.execvp(PULUMI_CMD, sys.argv)
+        try:
+            subprocess.run(executable=PULUMI_CMD, args=sys.argv, check=True)
+        except subprocess.CalledProcessError as e:
+            print(e.stderr.decode("utf-8"))
+        finally:
+            if CONFIG_STRATEGY == "override":
+                os.remove(args.config_file)
+    else:
+        print("Dry run detected, skipping Pulumi invokation. Terminating.")
 
 
 if __name__ == "__main__":
