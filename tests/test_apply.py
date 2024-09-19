@@ -10,7 +10,7 @@ from shutil import rmtree
 THIS_PATH = os.path.abspath(os.path.dirname(__file__))
 ROOT_PATH = os.path.join(THIS_PATH, "..")
 PULUMILOCAL_BIN = os.path.join(ROOT_PATH, "bin", "pulumilocal")
-LOCALSTACK_ENDPOINT = "http://localhost:4566"
+LOCALSTACK_ENDPOINT = "http://localhost.localstack.cloud:4566"
 
 
 @pytest.mark.parametrize("package_version", ["5.42.0", "latest"])
