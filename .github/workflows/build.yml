@@ -14,6 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       AWS_DEFAULT_REGION: us-east-1
+      PYTHONUNBUFFERED: 1
 
     steps:
     - name: Check out code
