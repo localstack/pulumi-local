@@ -37,8 +37,9 @@ def test_config_strategy(config_strategy: str):
     env_vars = {
         "PULUMI_CONFIG_PASSPHRASE": "localstack",
         "NON_INTERACTIVE": "1",
-        "CONFIG_STRATEGY": config_strategy,
     }
+    if config_strategy:
+        env_vars.update({"CONFIG_STRATEGY": config_strategy})
     tmp_dir = create_dummy_stack(env_vars=env_vars)
     match config_strategy:
         case "override":
