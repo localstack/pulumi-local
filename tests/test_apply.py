@@ -62,9 +62,13 @@ def test_config_strategy(config_strategy: str):
         local_config = expected_result[1]
         assert os.path.exists(stack_config) == should_exists
         if should_exists and local_config:
-            assert run([PULUMILOCAL_BIN, "config", "get", "aws:secretKey", "--cwd", tmp_dir, "--config-file", stack_config], env={**os.environ, **env_vars})[1].split("\n")[-2] == "test"
+            run_result = run([PULUMILOCAL_BIN, "config", "get", "aws:secretKey", "--cwd", tmp_dir, "--config-file", stack_config], env={**os.environ, **env_vars})
+            print(run_result)
+            assert run_result[1].strip("\n").split("\n")[-1] == "test"
         elif should_exists and not local_config:
-            assert run([PULUMILOCAL_BIN, "config", "get", "aws:secretKey", "--cwd", tmp_dir, "--config-file", stack_config], env={**os.environ, **env_vars})[0]
+            run_result = run([PULUMILOCAL_BIN, "config", "get", "aws:secretKey", "--cwd", tmp_dir, "--config-file", stack_config], env={**os.environ, **env_vars})
+            print(run_result)
+            assert run_result[0]
     rmtree(tmp_dir)
 
 ###
