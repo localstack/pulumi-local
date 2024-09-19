@@ -35,6 +35,12 @@ EDGE_PORT = int(urlparse(os.environ.get("AWS_ENDPOINT_URL")).port or os.environ.
 USE_SSL = str(os.environ.get("USE_SSL")).strip().lower() in TRUE_STRINGS
 DRY_RUN = str(os.environ.get("DRY_RUN")).strip().lower() in TRUE_STRINGS
 NON_INTERACTIVE = str(os.environ.get("NON_INTERACTIVE")).strip().lower() in TRUE_STRINGS
+PROXIED_CMDS = (
+    "up",
+    "destroy",
+    "preview",
+    "cancel"
+)
 
 
 # Do not allow PULUMI_CMD env var to be set to pulumilocal as this causes an error
@@ -214,7 +220,7 @@ def main():
         print(f'Config strategy is not recognised. Falling back to default ("{DEFAULT_CONFIG_STRATEGY}").')
 
     # If this is a pulumi deployment command, update the stack with LocalStack AWS config
-    if args.command in ["up", "destroy", "preview", "cancel"]:
+    if args.command in PROXIED_CMDS:
         if not args.stack:
             try:
                 args.stack = subprocess.run(
@@ -248,7 +254,9 @@ def main():
         print("Updating this Stack with LocalStack config")
         set_localstack_pulumi_config(args)
     # Run the original command
-    if not DRY_RUN:
+    if DRY_RUN and args.command in PROXIED_CMDS:
+        print("Dry run detected, skipping Pulumi invokation. Terminating.")
+    else:
         if args.non_interactive and "--non-interactive" not in sys.argv:
             sys.argv.append("--non-interactive")
         try:
@@ -256,10 +264,8 @@ def main():
         except subprocess.CalledProcessError as e:
             print(e.stderr.decode("utf-8"))
         finally:
-            if CONFIG_STRATEGY == "override":
+            if CONFIG_STRATEGY == "override" and args.command in PROXIED_CMDS:
                 os.remove(args.config_file)
-    else:
-        print("Dry run detected, skipping Pulumi invokation. Terminating.")
 
 
 if __name__ == "__main__":
