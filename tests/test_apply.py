@@ -31,9 +31,10 @@ def test_provisioning_outside_project():
     bucket_name = short_uid()
     assert "error: no Pulumi.yaml project file found" in create_test_bucket(bucket_name, should_fail=True)
 
+
 @pytest.mark.parametrize("config_strategy", ["override", "overwrite", "separation", "separate", ""])
 def test_config_strategy(config_strategy: str):
-    env_vars={
+    env_vars = {
         "PULUMI_CONFIG_PASSPHRASE": "localstack",
         "NON_INTERACTIVE": "1",
         "CONFIG_STRATEGY": config_strategy,
@@ -61,9 +62,9 @@ def test_config_strategy(config_strategy: str):
         local_config = expected_result[1]
         assert os.path.exists(stack_config) == should_exists
         if should_exists and local_config:
-            assert run([PULUMILOCAL_BIN, "config", "get", "aws:secretKey", "--cwd", tmp_dir, "--config-file", stack_config],env={**os.environ, **env_vars})[1].split("\n")[-2] == "test"
+            assert run([PULUMILOCAL_BIN, "config", "get", "aws:secretKey", "--cwd", tmp_dir, "--config-file", stack_config], env={**os.environ, **env_vars})[1].split("\n")[-2] == "test"
         elif should_exists and not local_config:
-            assert run([PULUMILOCAL_BIN, "config", "get", "aws:secretKey", "--cwd", tmp_dir, "--config-file", stack_config],env={**os.environ, **env_vars})[0]
+            assert run([PULUMILOCAL_BIN, "config", "get", "aws:secretKey", "--cwd", tmp_dir, "--config-file", stack_config], env={**os.environ, **env_vars})[0]
     rmtree(tmp_dir)
 
 ###
