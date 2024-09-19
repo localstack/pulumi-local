@@ -5,6 +5,7 @@ import uuid
 from typing import Dict, Tuple
 import boto3
 import pytest
+from shutil import rmtree
 
 THIS_PATH = os.path.abspath(os.path.dirname(__file__))
 ROOT_PATH = os.path.join(THIS_PATH, "..")
@@ -30,15 +31,49 @@ def test_provisioning_outside_project():
     bucket_name = short_uid()
     assert "error: no Pulumi.yaml project file found" in create_test_bucket(bucket_name, should_fail=True)
 
+@pytest.mark.parametrize("config_strategy", ["override", "overwrite", "separation", "separate", ""])
+def test_config_strategy(config_strategy: str):
+    env_vars={
+        "PULUMI_CONFIG_PASSPHRASE": "localstack",
+        "NON_INTERACTIVE": "1",
+        "CONFIG_STRATEGY": config_strategy,
+    }
+    tmp_dir = create_dummy_stack(env_vars=env_vars)
+    match config_strategy:
+        case "override":
+            stack_configs = {
+                os.path.join(tmp_dir, "Pulumi.localstack.yaml"): (False, False),
+                os.path.join(tmp_dir, "Pulumi.test.yaml"): (True, False)
+            }
+        case "separation":
+            stack_configs = {
+                os.path.join(tmp_dir, "Pulumi.localstack.yaml"): (True, True),
+                os.path.join(tmp_dir, "Pulumi.test.yaml"): (True, False)
+            }
+        case _:
+            stack_configs = {
+                os.path.join(tmp_dir, "Pulumi.localstack.yaml"): (False, False),
+                os.path.join(tmp_dir, "Pulumi.test.yaml"): (True, True)
+            }
+
+    for stack_config, expected_result in stack_configs.items():
+        should_exists = expected_result[0]
+        local_config = expected_result[1]
+        assert os.path.exists(stack_config) == should_exists
+        if should_exists and local_config:
+            assert run([PULUMILOCAL_BIN, "config", "get", "aws:secretKey", "--cwd", tmp_dir, "--config-file", stack_config],env={**os.environ, **env_vars})[1].split("\n")[-2] == "test"
+        elif should_exists and not local_config:
+            assert run([PULUMILOCAL_BIN, "config", "get", "aws:secretKey", "--cwd", tmp_dir, "--config-file", stack_config],env={**os.environ, **env_vars})[0]
+    rmtree(tmp_dir)
 
 ###
 # UTIL FUNCTIONS
 ###
 
 
-def deploy_pulumi_script(script: str, version: str, select_stack: bool, select_cwd: bool, env_vars: Dict[str, str] = None, should_fail: bool = False) -> str:
+def deploy_pulumi_script(script: str, version: str, select_stack: bool, select_cwd: bool, env_vars: Dict[str, str] = None, should_fail: bool = False, cleanup: bool = True) -> str:
     kwargs = {}
-    with tempfile.TemporaryDirectory() as temp_dir:
+    with tempfile.TemporaryDirectory(delete=cleanup) as temp_dir:
         if not select_cwd and not should_fail:
             kwargs["cwd"] = temp_dir
         env_vars.update({
@@ -75,7 +110,19 @@ def deploy_pulumi_script(script: str, version: str, select_stack: bool, select_c
         if select_cwd and not should_fail:
             cmd.extend(["--cwd", temp_dir])
         out = run(cmd, **kwargs)
-        return out[1]
+        return temp_dir
+
+
+def create_dummy_stack(env_vars: Dict) -> str:
+    config = """import * as pulumi from "@pulumi/pulumi";"""
+    return deploy_pulumi_script(
+        config,
+        version="latest",
+        select_stack=False,
+        select_cwd=False,
+        env_vars=env_vars,
+        cleanup=False
+    )
 
 
 def create_test_bucket(bucket_name: str, version: str = "latest", select_stack: bool = False, select_cwd: bool = False, should_fail: bool = False) -> str:
