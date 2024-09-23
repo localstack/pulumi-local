@@ -17,6 +17,11 @@ from typing import Dict, List
 from shutil import copyfile
 from urllib.parse import urlparse
 from shutil import which
+import functools
+
+
+# force unbuffered print
+print = functools.partial(print, flush=True)
 
 # for local testing
 PARENT_FOLDER = os.path.realpath(os.path.join(os.path.dirname(__file__), ".."))
