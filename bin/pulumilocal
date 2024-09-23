@@ -55,6 +55,7 @@ if PULUMI_CMD == "pulumilocal":
 
 PULUMI_CMD = which(PULUMI_CMD)
 
+
 def deactivate_access_key(access_key: str) -> str:
     """Safe guarding user from accidental live credential usage by deactivating access key IDs.
         See more: https://docs.localstack.cloud/references/credentials/"""
