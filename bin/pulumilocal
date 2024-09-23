@@ -198,7 +198,7 @@ def main():
     # Parse arguments from call to pulumi CLI that set the stack name and directory
     parser = argparse.ArgumentParser(add_help=False)
     parser.add_argument("command", help="Pulumi command",
-                        type=str)
+                        type=str, nargs="?")
     parser.add_argument("-s", "--stack", help="The name of the stack to operate on. Defaults to the current stack",
                         required=False,
                         type=str)
