@@ -95,7 +95,7 @@ def generate_service_endpoints(args) -> Dict:
     if args.cwd:
         cmd_args.extend(("--cwd", args.cwd))
     try:
-        sp = subprocess.run(executable=PULUMI_CMD, args=cmd_args, stdout=subprocess.PIPE, check=True)
+        sp = subprocess.run(executable=PULUMI_CMD, args=cmd_args, check=True)
     except subprocess.CalledProcessError as e:
         exit(e.returncode)
     plugins = json.loads(sp.stdout.decode("utf-8")).get("plugins")
@@ -105,7 +105,7 @@ def generate_service_endpoints(args) -> Dict:
         version = ""
     config_args = [PULUMI_CMD, "package", "get-schema", f"aws{version}"]
     try:
-        sp = subprocess.run(executable=PULUMI_CMD, args=config_args, stdout=subprocess.PIPE, check=True)
+        sp = subprocess.run(executable=PULUMI_CMD, args=config_args, check=True)
     except subprocess.CalledProcessError as e:
         exit(e.returncode)
     schema = json.loads(sp.stdout.decode("utf-8"))
@@ -156,7 +156,6 @@ def set_localstack_pulumi_config(args: argparse.Namespace):
         subprocess.run(
             executable=PULUMI_CMD,
             args=(config_args + ["set-all"] + set_config_options(is_path=True, **{"aws:endpoints": ""})),
-            stdout=subprocess.PIPE,
             check=True
         )
     except subprocess.CalledProcessError as e:
@@ -180,7 +179,6 @@ def set_localstack_pulumi_config(args: argparse.Namespace):
             output = subprocess.run(
                 executable=PULUMI_CMD,
                 args=(config_args + ["get", k]),
-                stdout=subprocess.PIPE,
                 stderr=subprocess.DEVNULL,
                 check=True).stdout.decode("utf-8").strip("\n")
         except subprocess.CalledProcessError:
@@ -197,7 +195,7 @@ def set_localstack_pulumi_config(args: argparse.Namespace):
     for idx, service in enumerate(generate_service_endpoints(args)):
         config_args.extend(set_config_options(is_path=True, **{f"aws:endpoints[{idx}].{service}": service_url}))
     try:
-        subprocess.run(executable=PULUMI_CMD, args=config_args, stdout=subprocess.PIPE, check=True)
+        subprocess.run(executable=PULUMI_CMD, args=config_args, check=True)
     except subprocess.CalledProcessError as e:
         exit(e.returncode)
 
