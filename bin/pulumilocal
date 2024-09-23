@@ -16,6 +16,7 @@ import json
 from typing import Dict, List
 from shutil import copyfile
 from urllib.parse import urlparse
+from shutil import which
 
 # for local testing
 PARENT_FOLDER = os.path.realpath(os.path.join(os.path.dirname(__file__), ".."))
@@ -47,6 +48,7 @@ PROXIED_CMDS = (
 if PULUMI_CMD == "pulumilocal":
     PULUMI_CMD = "pulumi"
 
+PULUMI_CMD = which(PULUMI_CMD)
 
 def deactivate_access_key(access_key: str) -> str:
     """Safe guarding user from accidental live credential usage by deactivating access key IDs.
