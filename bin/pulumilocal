@@ -95,7 +95,7 @@ def generate_service_endpoints(args) -> Dict:
     if args.cwd:
         cmd_args.extend(("--cwd", args.cwd))
     try:
-        sp = subprocess.run(executable=PULUMI_CMD, args=cmd_args, check=True, bufsize=0)
+        sp = subprocess.run(executable=PULUMI_CMD, args=cmd_args, check=True, bufsize=0, capture_output=True)
     except subprocess.CalledProcessError as e:
         exit(e.returncode)
     plugins = json.loads(sp.stdout.decode("utf-8")).get("plugins")
@@ -105,7 +105,7 @@ def generate_service_endpoints(args) -> Dict:
         version = ""
     config_args = [PULUMI_CMD, "package", "get-schema", f"aws{version}"]
     try:
-        sp = subprocess.run(executable=PULUMI_CMD, args=config_args, check=True, bufsize=0)
+        sp = subprocess.run(executable=PULUMI_CMD, args=config_args, check=True, bufsize=0, capture_output=True)
     except subprocess.CalledProcessError as e:
         exit(e.returncode)
     schema = json.loads(sp.stdout.decode("utf-8"))
