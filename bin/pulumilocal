@@ -53,6 +53,7 @@ PROXIED_CMDS = (
 if PULUMI_CMD == "pulumilocal":
     PULUMI_CMD = "pulumi"
 
+# Look up path
 PULUMI_CMD = which(PULUMI_CMD)
 
 
