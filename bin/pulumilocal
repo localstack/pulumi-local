@@ -95,7 +95,7 @@ def generate_service_endpoints(args) -> Dict:
     if args.cwd:
         cmd_args.extend(("--cwd", args.cwd))
     try:
-        sp = subprocess.run(executable=PULUMI_CMD, args=cmd_args, check=True)
+        sp = subprocess.run(executable=PULUMI_CMD, args=cmd_args, check=True, bufsize=0)
     except subprocess.CalledProcessError as e:
         exit(e.returncode)
     plugins = json.loads(sp.stdout.decode("utf-8")).get("plugins")
@@ -105,7 +105,7 @@ def generate_service_endpoints(args) -> Dict:
         version = ""
     config_args = [PULUMI_CMD, "package", "get-schema", f"aws{version}"]
     try:
-        sp = subprocess.run(executable=PULUMI_CMD, args=config_args, check=True)
+        sp = subprocess.run(executable=PULUMI_CMD, args=config_args, check=True, bufsize=0)
     except subprocess.CalledProcessError as e:
         exit(e.returncode)
     schema = json.loads(sp.stdout.decode("utf-8"))
@@ -156,7 +156,8 @@ def set_localstack_pulumi_config(args: argparse.Namespace):
         subprocess.run(
             executable=PULUMI_CMD,
             args=(config_args + ["set-all"] + set_config_options(is_path=True, **{"aws:endpoints": ""})),
-            check=True
+            check=True,
+            bufsize=0,
         )
     except subprocess.CalledProcessError as e:
         exit(e.returncode)
@@ -180,7 +181,10 @@ def set_localstack_pulumi_config(args: argparse.Namespace):
                 executable=PULUMI_CMD,
                 args=(config_args + ["get", k]),
                 stderr=subprocess.DEVNULL,
-                check=True).stdout.decode("utf-8").strip("\n")
+                check=True,
+                capture_output=True,
+                bufsize=0,
+            ).stdout.decode("utf-8").strip("\n")
         except subprocess.CalledProcessError:
             pass
         else:
@@ -195,7 +199,7 @@ def set_localstack_pulumi_config(args: argparse.Namespace):
     for idx, service in enumerate(generate_service_endpoints(args)):
         config_args.extend(set_config_options(is_path=True, **{f"aws:endpoints[{idx}].{service}": service_url}))
     try:
-        subprocess.run(executable=PULUMI_CMD, args=config_args, check=True)
+        subprocess.run(executable=PULUMI_CMD, args=config_args, check=True, bufsize=0)
     except subprocess.CalledProcessError as e:
         exit(e.returncode)
 
@@ -236,7 +240,8 @@ def main():
                 args.stack = subprocess.run(
                     [PULUMI_CMD, "stack", "--show-name", "--non-interactive", "-C", args.cwd],
                     check=True,
-                    capture_output=True
+                    capture_output=True,
+                    bufsize=0,
                 ).stdout.decode("utf-8").strip("\n")
             except (subprocess.CalledProcessError) as e:
                 print(e.stderr.decode("utf-8"), file=sys.stderr)
@@ -253,7 +258,8 @@ def main():
             subprocess.run(
                 [PULUMI_CMD, "stack", "init", "--non-interactive", "-s", LS_STACK_NAME, "-C", args.cwd],
                 check=False,
-                stderr=subprocess.DEVNULL
+                stderr=subprocess.DEVNULL,
+                bufsize=0,
             )
             override_config_file = os.path.join(os.path.dirname(config_file_path), f"Pulumi.{LS_STACK_NAME}.yaml")
             if override_config_file != config_file_path:
@@ -268,7 +274,7 @@ def main():
         if args.non_interactive and "--non-interactive" not in sys.argv:
             sys.argv.append("--non-interactive")
         try:
-            subprocess.run(executable=PULUMI_CMD, args=sys.argv, check=True)
+            subprocess.run(executable=PULUMI_CMD, args=sys.argv, check=True, bufsize=0)
         except subprocess.CalledProcessError as e:
             print(e.stderr.decode("utf-8"), file=sys.stderr)
         finally:
