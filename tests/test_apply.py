@@ -40,37 +40,40 @@ def test_config_strategy(config_strategy: str):
     }
     if config_strategy:
         env_vars.update({"CONFIG_STRATEGY": config_strategy})
-    tmp_dir = create_dummy_stack(env_vars=env_vars)
-    match config_strategy:
-        case "override":
-            stack_configs = {
-                os.path.join(tmp_dir, "Pulumi.localstack.yaml"): (False, False),
-                os.path.join(tmp_dir, "Pulumi.test.yaml"): (True, False)
-            }
-        case "separation":
-            stack_configs = {
-                os.path.join(tmp_dir, "Pulumi.localstack.yaml"): (True, True),
-                os.path.join(tmp_dir, "Pulumi.test.yaml"): (True, False)
-            }
-        case _:
-            stack_configs = {
-                os.path.join(tmp_dir, "Pulumi.localstack.yaml"): (False, False),
-                os.path.join(tmp_dir, "Pulumi.test.yaml"): (True, True)
-            }
+    try:
+        tmp_dir = create_dummy_stack(env_vars=env_vars)
+        match config_strategy:
+            case "override":
+                stack_configs = {
+                    os.path.join(tmp_dir, "Pulumi.localstack.yaml"): (False, False),
+                    os.path.join(tmp_dir, "Pulumi.test.yaml"): (True, False)
+                }
+            case "separation":
+                stack_configs = {
+                    os.path.join(tmp_dir, "Pulumi.localstack.yaml"): (True, True),
+                    os.path.join(tmp_dir, "Pulumi.test.yaml"): (True, False)
+                }
+            case _:
+                stack_configs = {
+                    os.path.join(tmp_dir, "Pulumi.localstack.yaml"): (False, False),
+                    os.path.join(tmp_dir, "Pulumi.test.yaml"): (True, True)
+                }
 
-    for stack_config, expected_result in stack_configs.items():
-        should_exists = expected_result[0]
-        local_config = expected_result[1]
-        assert os.path.exists(stack_config) == should_exists
-        if should_exists and local_config:
-            run_result = run([PULUMILOCAL_BIN, "config", "get", "aws:secretKey", "--cwd", tmp_dir, "--config-file", stack_config], env={**os.environ, **env_vars})
-            print(run_result)
-            assert run_result[1].strip("\n").split("\n")[-1] == "test"
-        elif should_exists and not local_config:
-            run_result = run([PULUMILOCAL_BIN, "config", "get", "aws:secretKey", "--cwd", tmp_dir, "--config-file", stack_config], env={**os.environ, **env_vars})
-            print(run_result)
-            assert run_result[0]
-    rmtree(tmp_dir)
+        for stack_config, expected_result in stack_configs.items():
+            should_exists = expected_result[0]
+            local_config = expected_result[1]
+            assert os.path.exists(stack_config) == should_exists
+            if should_exists and local_config:
+                run_result = run([PULUMILOCAL_BIN, "config", "get", "aws:secretKey", "--cwd", tmp_dir, "--config-file", stack_config], env={**os.environ, **env_vars})
+                print(run_result)
+                assert run_result[1].strip("\n").split("\n")[-1] == "test"
+            elif should_exists and not local_config:
+                run_result = run([PULUMILOCAL_BIN, "config", "get", "aws:secretKey", "--cwd", tmp_dir, "--config-file", stack_config], env={**os.environ, **env_vars})
+                print(run_result)
+                assert run_result[0]
+    finally:
+        if os.path.exists(tmp_dir):
+            rmtree(tmp_dir)
 
 ###
 # UTIL FUNCTIONS
