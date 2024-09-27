@@ -87,7 +87,7 @@ def generate_service_endpoints(args) -> Dict:
     if args.cwd:
         cmd_args.extend(("--cwd", args.cwd))
     try:
-        sp = subprocess.run(executable=PULUMI_CMD, args=cmd_args, env=os.environ, stdout=subprocess.PIPE, check=True)
+        sp = subprocess.run(executable=PULUMI_CMD, args=cmd_args, stdout=subprocess.PIPE, check=True)
     except subprocess.CalledProcessError as e:
         exit(e.returncode)
     plugins = json.loads(sp.stdout.decode("utf-8")).get("plugins")
@@ -97,7 +97,7 @@ def generate_service_endpoints(args) -> Dict:
         version = ""
     config_args = [PULUMI_CMD, "package", "get-schema", f"aws{version}"]
     try:
-        sp = subprocess.run(executable=PULUMI_CMD, args=config_args, env=os.environ, stdout=subprocess.PIPE, check=True)
+        sp = subprocess.run(executable=PULUMI_CMD, args=config_args, stdout=subprocess.PIPE, check=True)
     except subprocess.CalledProcessError as e:
         exit(e.returncode)
     schema = json.loads(sp.stdout.decode("utf-8"))
@@ -145,7 +145,7 @@ def set_localstack_pulumi_config(args: argparse.Namespace):
 
     # Resetting all endpoints
     try:
-        subprocess.run(executable=PULUMI_CMD, args=(config_args + ["set-all"] + set_config_options(is_path=True, **{"aws:endpoints": ""})), env=os.environ, stdout=subprocess.PIPE, check=True)
+        subprocess.run(executable=PULUMI_CMD, args=(config_args + ["set-all"] + set_config_options(is_path=True, **{"aws:endpoints": ""})), stdout=subprocess.PIPE, check=True)
     except subprocess.CalledProcessError as e:
         exit(e.returncode)
     except FileNotFoundError as e:
@@ -167,7 +167,6 @@ def set_localstack_pulumi_config(args: argparse.Namespace):
             output = subprocess.run(
                 executable=PULUMI_CMD,
                 args=(config_args + ["get", k]),
-                env=os.environ,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.DEVNULL,
                 check=True).stdout.decode("utf-8").strip("\n")
@@ -185,7 +184,7 @@ def set_localstack_pulumi_config(args: argparse.Namespace):
     for idx, service in enumerate(generate_service_endpoints(args)):
         config_args.extend(set_config_options(is_path=True, **{f"aws:endpoints[{idx}].{service}": service_url}))
     try:
-        subprocess.run(executable=PULUMI_CMD, args=config_args, env=os.environ, stdout=subprocess.PIPE, check=True)
+        subprocess.run(executable=PULUMI_CMD, args=config_args, stdout=subprocess.PIPE, check=True)
     except subprocess.CalledProcessError as e:
         exit(e.returncode)
 
@@ -225,7 +224,6 @@ def main():
             try:
                 args.stack = subprocess.run(
                     [PULUMI_CMD, "stack", "--show-name", "--non-interactive", "-C", args.cwd],
-                    env=os.environ,
                     check=True,
                     capture_output=True
                 ).stdout.decode("utf-8").strip("\n")
