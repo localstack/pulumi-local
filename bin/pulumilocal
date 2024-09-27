@@ -14,6 +14,7 @@ import argparse
 import subprocess
 import json
 from typing import Dict, List
+from shutil import copyfile
 from urllib.parse import urlparse
 
 # for local testing
@@ -23,15 +24,60 @@ if os.path.isdir(os.path.join(PARENT_FOLDER, ".venv")):
 
 # define global constants
 TRUE_STRINGS = ["1", "true"]
+CONFIG_STRATEGIES = ("overwrite", "override", "separation")
+DEFAULT_CONFIG_STRATEGY = "overwrite"
+LS_STACK_NAME = os.environ.get("LS_STACK_NAME") or "localstack"
+CONFIG_STRATEGY = os.environ.get("CONFIG_STRATEGY") if os.environ.get("CONFIG_STRATEGY") in CONFIG_STRATEGIES else DEFAULT_CONFIG_STRATEGY
 PULUMI_CMD = os.environ.get("PULUMI_CMD") or "pulumi"
 AWS_ENDPOINT_URL = os.environ.get("AWS_ENDPOINT_URL")
 LOCALSTACK_HOSTNAME = urlparse(os.environ.get("AWS_ENDPOINT_URL")).hostname or os.environ.get("LOCALSTACK_HOSTNAME") or "localhost"
 EDGE_PORT = int(urlparse(os.environ.get("AWS_ENDPOINT_URL")).port or os.environ.get("EDGE_PORT") or 4566)
-USE_SSL = str(os.environ.get("USE_SSL")).strip().lower() in TRUE_STRINGS
+USE_SSL = str(os.environ.get("USE_SSL", "")).strip().lower() in TRUE_STRINGS
+DRY_RUN = str(os.environ.get("DRY_RUN", "")).strip().lower() in TRUE_STRINGS
+NON_INTERACTIVE = str(os.environ.get("NON_INTERACTIVE", "")).strip().lower() in TRUE_STRINGS
+PROXIED_CMDS = (
+    "up",
+    "destroy",
+    "preview",
+    "cancel"
+)
+
 
 # Do not allow PULUMI_CMD env var to be set to pulumilocal as this causes an error
 if PULUMI_CMD == "pulumilocal":
     PULUMI_CMD = "pulumi"
+
+
+def deactivate_access_key(access_key: str) -> str:
+    """Safe guarding user from accidental live credential usage by deactivating access key IDs.
+        See more: https://docs.localstack.cloud/references/credentials/"""
+    return "L" + access_key[1:] if access_key[0] == "A" else access_key
+
+
+def get_stack_config_file_path(args: argparse.Namespace) -> str:
+    """Determine the path under which the stack config file should exist"""
+    if args.config_file and os.path.isabs(args.config_file):
+        return args.config_file
+
+    base_dir = args.cwd or "."
+    stack_config = args.config_file or f"Pulumi.{args.stack}.yaml"
+
+    return os.path.join(base_dir, stack_config)
+
+
+def check_stack_config_file(stack_config: str) -> None:
+    """Checks stack config file existance"""
+    if os.path.exists(stack_config):
+        msg = f"Stack config file {stack_config} already exists"
+        err_msg = msg + " - please delete it first, exiting..."
+        if CONFIG_STRATEGY == "overwrite":
+            msg += ". File will be overwritten."
+            print(msg)
+            print("\tOnly 'yes' will be accepted to approve.")
+            if input("\tEnter a value: ") == "yes":
+                return
+        print(err_msg, file=sys.stderr)
+        exit(1)
 
 
 def generate_service_endpoints(args) -> Dict:
@@ -41,7 +87,7 @@ def generate_service_endpoints(args) -> Dict:
     if args.cwd:
         cmd_args.extend(("--cwd", args.cwd))
     try:
-        sp = subprocess.run(executable=PULUMI_CMD, args=cmd_args, env=os.environ, stdout=subprocess.PIPE, check=True)
+        sp = subprocess.run(executable=PULUMI_CMD, args=cmd_args, stdout=subprocess.PIPE, check=True)
     except subprocess.CalledProcessError as e:
         exit(e.returncode)
     plugins = json.loads(sp.stdout.decode("utf-8")).get("plugins")
@@ -51,7 +97,7 @@ def generate_service_endpoints(args) -> Dict:
         version = ""
     config_args = [PULUMI_CMD, "package", "get-schema", f"aws{version}"]
     try:
-        sp = subprocess.run(executable=PULUMI_CMD, args=config_args, env=os.environ, stdout=subprocess.PIPE, check=True)
+        sp = subprocess.run(executable=PULUMI_CMD, args=config_args, stdout=subprocess.PIPE, check=True)
     except subprocess.CalledProcessError as e:
         exit(e.returncode)
     schema = json.loads(sp.stdout.decode("utf-8"))
@@ -93,15 +139,22 @@ def set_localstack_pulumi_config(args: argparse.Namespace):
     if args.cwd:
         config_args.append("--cwd")
         config_args.append(args.cwd)
-    config_args.append("set-all")
+    if args.config_file:
+        config_args.append("--config-file")
+        config_args.append(args.config_file)
 
     # Resetting all endpoints
     try:
-        subprocess.run(executable=PULUMI_CMD, args=(config_args + set_config_options(is_path=True, **{"aws:endpoints": ""})), env=os.environ, stdout=subprocess.PIPE, check=True)
+        subprocess.run(
+            executable=PULUMI_CMD,
+            args=(config_args + ["set-all"] + set_config_options(is_path=True, **{"aws:endpoints": ""})),
+            stdout=subprocess.PIPE,
+            check=True
+        )
     except subprocess.CalledProcessError as e:
         exit(e.returncode)
     except FileNotFoundError as e:
-        print(e)
+        print(e, file=sys.stderr)
         exit(e.errno)
 
     DEFAULT_CONFIG_ARGS = {
@@ -112,11 +165,31 @@ def set_localstack_pulumi_config(args: argparse.Namespace):
         "aws:skipCredentialsValidation": "true",
         "aws:skipRequestingAccountId": "true",
     }
+
+    tmp = DEFAULT_CONFIG_ARGS.copy()
+    for k in DEFAULT_CONFIG_ARGS:
+        try:
+            output = subprocess.run(
+                executable=PULUMI_CMD,
+                args=(config_args + ["get", k]),
+                stdout=subprocess.PIPE,
+                stderr=subprocess.DEVNULL,
+                check=True).stdout.decode("utf-8").strip("\n")
+        except subprocess.CalledProcessError:
+            pass
+        else:
+            if k == "aws:accessKey":
+                tmp[k] = deactivate_access_key(output)
+            elif k != "aws:secretKey":
+                del tmp[k]
+    DEFAULT_CONFIG_ARGS = tmp
+
+    config_args.append("set-all")
     config_args.extend(set_config_options(**DEFAULT_CONFIG_ARGS))
     for idx, service in enumerate(generate_service_endpoints(args)):
         config_args.extend(set_config_options(is_path=True, **{f"aws:endpoints[{idx}].{service}": service_url}))
     try:
-        subprocess.run(executable=PULUMI_CMD, args=config_args, env=os.environ, stdout=subprocess.PIPE, check=True)
+        subprocess.run(executable=PULUMI_CMD, args=config_args, stdout=subprocess.PIPE, check=True)
     except subprocess.CalledProcessError as e:
         exit(e.returncode)
 
@@ -124,22 +197,77 @@ def set_localstack_pulumi_config(args: argparse.Namespace):
 def main():
     # Parse arguments from call to pulumi CLI that set the stack name and directory
     parser = argparse.ArgumentParser(add_help=False)
-    parser.add_argument("command", help="pulumi primary command",
+    parser.add_argument("command", help="Pulumi command",
                         type=str)
-    parser.add_argument("-s", "--stack", help="pulumi stack name",
+    parser.add_argument("-s", "--stack", help="The name of the stack to operate on. Defaults to the current stack",
                         required=False,
                         type=str)
-    parser.add_argument("-C", "--cwd", help="run in this directory",
+    parser.add_argument("-C", "--cwd", help="Run pulumi as if it had been started in another directory",
                         required=False,
                         type=str)
+    parser.add_argument("--config-file", help="Use the configuration values in the specified file rather than detecting the file name",
+                        required=False,
+                        type=str)
+    parser.add_argument("--non-interactive", help="Disable interactive mode for all commands",
+                        action="store_true",
+                        required=False)
     args, _ = parser.parse_known_args()
 
+    if NON_INTERACTIVE:
+        args.non_interactive = True
+
+    if not args.cwd:
+        args.cwd = "."
+
+    if os.environ.get("CONFIG_STRATEGY") not in CONFIG_STRATEGIES:
+        print(f"Config strategy: {os.environ.get('CONFIG_STRATEGY')}")
+        print(f'Config strategy is not recognised. Falling back to default ("{DEFAULT_CONFIG_STRATEGY}").')
+
     # If this is a pulumi deployment command, update the stack with LocalStack AWS config
-    if args.command in ["up", "destroy", "preview", "cancel"]:
+    if args.command in PROXIED_CMDS:
+        if not args.stack:
+            try:
+                args.stack = subprocess.run(
+                    [PULUMI_CMD, "stack", "--show-name", "--non-interactive", "-C", args.cwd],
+                    check=True,
+                    capture_output=True
+                ).stdout.decode("utf-8").strip("\n")
+            except (subprocess.CalledProcessError) as e:
+                print(e.stderr.decode("utf-8"), file=sys.stderr)
+                exit(1)
+        config_file_path = get_stack_config_file_path(args)
+        if not args.non_interactive:
+            check_stack_config_file(config_file_path)
+        if CONFIG_STRATEGY == "override":
+            override_config_file = os.path.join(os.path.dirname(config_file_path), f"Pulumi.{LS_STACK_NAME}.yaml")
+            copyfile(src=config_file_path, dst=override_config_file)
+            args.config_file = override_config_file
+        elif CONFIG_STRATEGY == "separation":
+            print(f"Creating stack {LS_STACK_NAME}, if not existing...")
+            subprocess.run(
+                [PULUMI_CMD, "stack", "init", "--non-interactive", "-s", LS_STACK_NAME, "-C", args.cwd],
+                check=False,
+                stderr=subprocess.DEVNULL
+            )
+            override_config_file = os.path.join(os.path.dirname(config_file_path), f"Pulumi.{LS_STACK_NAME}.yaml")
+            if override_config_file != config_file_path:
+                copyfile(src=config_file_path, dst=override_config_file)
+                args.config_file = override_config_file
         print("Updating this Stack with LocalStack config")
         set_localstack_pulumi_config(args)
     # Run the original command
-    return os.execvp(PULUMI_CMD, sys.argv)
+    if DRY_RUN and args.command in PROXIED_CMDS:
+        print("Dry run detected, skipping Pulumi invokation. Terminating.")
+    else:
+        if args.non_interactive and "--non-interactive" not in sys.argv:
+            sys.argv.append("--non-interactive")
+        try:
+            subprocess.run(executable=PULUMI_CMD, args=sys.argv, check=True)
+        except subprocess.CalledProcessError as e:
+            print(e.stderr.decode("utf-8"), file=sys.stderr)
+        finally:
+            if CONFIG_STRATEGY == "override" and args.command in PROXIED_CMDS:
+                os.remove(args.config_file)
 
 
 if __name__ == "__main__":

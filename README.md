@@ -64,6 +64,18 @@ You can configure the following environment variables:
 * `LOCALSTACK_HOSTNAME`: __(Deprecated)__ Target host to use for connecting to LocalStack (default: `localhost`)
 * `EDGE_PORT`: __(Deprecated)__ Target port to use for connecting to LocalStack (default: `4566`)
 * `PULUMI_CMD`: Name of the executable Pulumi command on the system PATH (default: `pulumi`)
+* `CONFIG_STRATEGY`: the strategy to handle config merging. If stack config already exists `pulumi-local` will prompt for user input. Possible values are:
+  * `overwrite` (default): pulumi-local will overwrite the stack's config and replaces it with values necessary to communicate with LocalStack. This strategy is equivalent of the legacy behaviour.
+  * `override`: generates a temporary config file from the current stack config and overrides it's values, after run this file will be deleted. The name of the file is generated from the `LS_STACK_NAME` variable.
+  * `separate`: creates a separate stack with the stack name set in the `LS_STACK_NAME` env variable.
+> [!NOTE]
+> The fall through to the default strategy with a misconfigured or missing `CONFIG_STRATEGY` environment variable will be deprecated by the next `pulumi-local` version.
+* `LS_STACK_NAME`: the stack name to use when the config file generated either with the `override` and `separate` strategy.
+* `DRY_RUN`: only usable with `CONFIG_STRATEGY=override`, as a result the created temporary stack config is not deleted.
+* `NON_INTERACTIVE`: starts a non-interactive session where all user prompts are automatically accepted
+
+> [!WARNING]
+> Using the `DRY_RUN` and `NON_INTERACTIVE` flags together changes the stack configuration without confirmation prompt. Use with caution!
 
 ## Deploying to AWS
 Use your preferred Pulumi backend. https://www.pulumi.com/docs/concepts/state/#deciding-on-a-state-backend
@@ -71,6 +83,7 @@ Change the `pulumilocal` command in the instructions above to `pulumi`.
 
 ## Change Log
 
+* v1.3.0: Add config merging strategies, dry-run and non-interactive runs.
 * v1.2.2: Fix project URL in package metadata
 * v1.2.1: Add support for AWS_ENDPOINT_URL env variable
 * v1.2.0: Added dynamic endpoint generation and tests

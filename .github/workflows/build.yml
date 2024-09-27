@@ -14,6 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       AWS_DEFAULT_REGION: us-east-1
+      PYTHONUNBUFFERED: 1
 
     steps:
     - name: Check out code
@@ -26,10 +27,10 @@ jobs:
 
     - name: Install Pulumi CLI
       uses: pulumi/setup-pulumi@v2
-    - name: Set up Python 3.11
+    - name: Set up Python 3.12
       uses: actions/setup-python@v2
       with:
-        python-version: '3.11'
+        python-version: '3.12'
 
     - name: Install dependencies
       run: make install
