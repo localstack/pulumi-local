@@ -76,7 +76,7 @@ def check_stack_config_file(stack_config: str) -> None:
             print("\tOnly 'yes' will be accepted to approve.")
             if input("\tEnter a value: ") == "yes":
                 return
-        print(err_msg)
+        print(err_msg, file=sys.stderr)
         exit(1)
 
 
@@ -149,7 +149,7 @@ def set_localstack_pulumi_config(args: argparse.Namespace):
     except subprocess.CalledProcessError as e:
         exit(e.returncode)
     except FileNotFoundError as e:
-        print(e)
+        print(e, file=sys.stderr)
         exit(e.errno)
 
     DEFAULT_CONFIG_ARGS = {
@@ -230,7 +230,7 @@ def main():
                     capture_output=True
                 ).stdout.decode("utf-8").strip("\n")
             except (subprocess.CalledProcessError) as e:
-                print(e.stderr.decode("utf-8"))
+                print(e.stderr.decode("utf-8"), file=sys.stderr)
                 exit(1)
         config_file_path = get_stack_config_file_path(args)
         if not args.non_interactive:
@@ -262,7 +262,7 @@ def main():
         try:
             subprocess.run(executable=PULUMI_CMD, args=sys.argv, check=True)
         except subprocess.CalledProcessError as e:
-            print(e.stderr.decode("utf-8"))
+            print(e.stderr.decode("utf-8"), file=sys.stderr)
         finally:
             if CONFIG_STRATEGY == "override" and args.command in PROXIED_CMDS:
                 os.remove(args.config_file)
