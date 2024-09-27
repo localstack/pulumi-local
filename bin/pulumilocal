@@ -182,8 +182,8 @@ def set_localstack_pulumi_config(args: argparse.Namespace):
                 executable=PULUMI_CMD,
                 args=(config_args + ["get", k]),
                 stderr=subprocess.DEVNULL,
+                stdout=subprocess.PIPE,
                 check=True,
-                capture_output=True,
                 bufsize=0,
             ).stdout.decode("utf-8").strip("\n")
         except subprocess.CalledProcessError:
