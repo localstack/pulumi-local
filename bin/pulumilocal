@@ -26,7 +26,7 @@ if os.path.isdir(os.path.join(PARENT_FOLDER, ".venv")):
 TRUE_STRINGS = ["1", "true"]
 CONFIG_STRATEGIES = ("overwrite", "override", "separation")
 DEFAULT_CONFIG_STRATEGY = "overwrite"
-LOCAL_STACK_NAME = os.environ.get("LOCAL_STACK_NAME") or "localstack"
+LS_STACK_NAME = os.environ.get("LS_STACK_NAME") or "localstack"
 CONFIG_STRATEGY = os.environ.get("CONFIG_STRATEGY") if os.environ.get("CONFIG_STRATEGY") in CONFIG_STRATEGIES else DEFAULT_CONFIG_STRATEGY
 PULUMI_CMD = os.environ.get("PULUMI_CMD") or "pulumi"
 AWS_ENDPOINT_URL = os.environ.get("AWS_ENDPOINT_URL")
@@ -236,18 +236,17 @@ def main():
         if not args.non_interactive:
             check_stack_config_file(config_file_path)
         if CONFIG_STRATEGY == "override":
-            override_config_file = os.path.join(os.path.dirname(config_file_path), f"Pulumi.{LOCAL_STACK_NAME}.yaml")
+            override_config_file = os.path.join(os.path.dirname(config_file_path), f"Pulumi.{LS_STACK_NAME}.yaml")
             copyfile(src=config_file_path, dst=override_config_file)
             args.config_file = override_config_file
         elif CONFIG_STRATEGY == "separation":
-            print(f"Creating stack {LOCAL_STACK_NAME}, if not existing...")
+            print(f"Creating stack {LS_STACK_NAME}, if not existing...")
             subprocess.run(
-                [PULUMI_CMD, "stack", "init", "--non-interactive", "-s", LOCAL_STACK_NAME, "-C", args.cwd],
-                env=os.environ,
+                [PULUMI_CMD, "stack", "init", "--non-interactive", "-s", LS_STACK_NAME, "-C", args.cwd],
                 check=False,
                 stderr=subprocess.DEVNULL
             )
-            override_config_file = os.path.join(os.path.dirname(config_file_path), f"Pulumi.{LOCAL_STACK_NAME}.yaml")
+            override_config_file = os.path.join(os.path.dirname(config_file_path), f"Pulumi.{LS_STACK_NAME}.yaml")
             if override_config_file != config_file_path:
                 copyfile(src=config_file_path, dst=override_config_file)
                 args.config_file = override_config_file
