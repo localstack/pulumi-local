@@ -56,6 +56,10 @@ if PULUMI_CMD == "pulumilocal":
 # Look up path
 PULUMI_CMD = which(PULUMI_CMD)
 
+if PULUMI_CMD is None:
+    print("Cannot find pulumi. Maybe it is not installed?", file=sys.stderr)
+    exit(1)
+
 
 def deactivate_access_key(access_key: str) -> str:
     """Safe guarding user from accidental live credential usage by deactivating access key IDs.
