@@ -67,10 +67,10 @@ You can configure the following environment variables:
 * `CONFIG_STRATEGY`: the strategy to handle config merging. If stack config already exists `pulumi-local` will prompt for user input. Possible values are:
   * `overwrite` (default): pulumi-local will overwrite the stack's config and replaces it with values necessary to communicate with LocalStack. This strategy is equivalent of the legacy behaviour.
   * `override`: generates a temporary config file from the current stack config and overrides it's values, after run this file will be deleted. The name of the file is generated from the `LS_STACK_NAME` variable.
-  * `separate`: creates a separate stack with the stack name set in the `LS_STACK_NAME` env variable.
+  * `separation`: creates a separate stack with the stack name set in the `LS_STACK_NAME` env variable.
 > [!NOTE]
 > The fall through to the default strategy with a misconfigured or missing `CONFIG_STRATEGY` environment variable will be deprecated by the next `pulumi-local` version.
-* `LS_STACK_NAME`: the stack name to use when the config file generated either with the `override` and `separate` strategy.
+* `LS_STACK_NAME`: the stack name to use when the config file generated either with the `override` and `separation` strategy.
 * `DRY_RUN`: only usable with `CONFIG_STRATEGY=override`, as a result the created temporary stack config is not deleted.
 * `NON_INTERACTIVE`: starts a non-interactive session where all user prompts are automatically accepted
 
