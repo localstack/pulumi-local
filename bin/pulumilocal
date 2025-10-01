@@ -45,7 +45,8 @@ PROXIED_CMDS = (
     "up",
     "destroy",
     "preview",
-    "cancel"
+    "cancel",
+    "import"
 )
 
 
