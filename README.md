@@ -83,6 +83,7 @@ Change the `pulumilocal` command in the instructions above to `pulumi`.
 
 ## Change Log
 
+* v1.3.1: Add support for `import` command.
 * v1.3.0: Add config merging strategies, dry-run and non-interactive runs.
 * v1.2.2: Fix project URL in package metadata
 * v1.2.1: Add support for AWS_ENDPOINT_URL env variable
