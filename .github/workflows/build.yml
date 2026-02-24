@@ -21,9 +21,9 @@ jobs:
       uses: actions/checkout@v3
 
     - name: Start LocalStack
-      uses: LocalStack/setup-localstack@v0.2.4
-      with:
-        image-tag: 'latest'
+      uses: LocalStack/setup-localstack@v0.2.5
+      env:
+        LOCALSTACK_AUTH_TOKEN: ${{ secrets.LOCALSTACK_AUTH_TOKEN }}
 
     - name: Install Pulumi CLI
       uses: pulumi/setup-pulumi@v2
