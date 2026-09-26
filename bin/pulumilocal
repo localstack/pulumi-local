@@ -50,12 +50,33 @@ PROXIED_CMDS = (
 )
 
 
+PULUMI_CMD_NAME = os.environ.get("PULUMI_CMD") or "pulumi"
+
 # Do not allow PULUMI_CMD env var to be set to pulumilocal as this causes an error
-if PULUMI_CMD == "pulumilocal":
-    PULUMI_CMD = "pulumi"
+if os.path.basename(PULUMI_CMD_NAME) in ("pulumilocal", "pulumilocal.bat"):
+    PULUMI_CMD_NAME = "pulumi"
 
 # Look up path
-PULUMI_CMD = which(PULUMI_CMD)
+PULUMI_CMD = which(PULUMI_CMD_NAME)
+
+
+def validate_pulumi_cmd() -> None:
+    if not PULUMI_CMD:
+        print(
+            f"Error: Unable to find '{PULUMI_CMD_NAME}' executable in PATH. "
+            "Please ensure Pulumi is installed and available in your PATH, "
+            "or set the PULUMI_CMD environment variable.",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+    if os.path.realpath(PULUMI_CMD) == os.path.realpath(sys.argv[0]):
+        print(
+            "Error: PULUMI_CMD points to pulumilocal itself, which would cause an infinite loop. "
+            "Please ensure Pulumi is installed and available in your PATH, "
+            "or set PULUMI_CMD to point to the pulumi binary.",
+            file=sys.stderr,
+        )
+        sys.exit(1)
 
 
 def deactivate_access_key(access_key: str) -> str:
@@ -207,6 +228,8 @@ def set_localstack_pulumi_config(args: argparse.Namespace):
 
 
 def main():
+    validate_pulumi_cmd()
+
     # Parse arguments from call to pulumi CLI that set the stack name and directory
     parser = argparse.ArgumentParser(add_help=False)
     parser.add_argument("command", help="Pulumi command",
@@ -275,10 +298,13 @@ def main():
     else:
         if args.non_interactive and "--non-interactive" not in sys.argv:
             sys.argv.append("--non-interactive")
+        cmd_args = [PULUMI_CMD] + sys.argv[1:]
         try:
-            subprocess.run(executable=PULUMI_CMD, args=sys.argv, check=True, bufsize=0)
+            subprocess.run(cmd_args, check=True, bufsize=0)
         except subprocess.CalledProcessError as e:
-            print(e.stderr.decode("utf-8"), file=sys.stderr)
+            if e.stderr:
+                print(e.stderr.decode("utf-8"), file=sys.stderr)
+            sys.exit(e.returncode)
         finally:
             if CONFIG_STRATEGY == "override" and args.command in PROXIED_CMDS:
                 os.remove(args.config_file)
